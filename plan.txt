@@ -1,0 +1,904 @@
+---
+
+# Prompt: Build a Modern Personal Finance Tracker (Expo + MERN Stack)
+
+## Role
+
+You are a Senior Full Stack Software Engineer, Mobile Developer, UI/UX Designer, System Architect, and QA Engineer.
+
+Build a **production-ready Personal Finance Tracker** using the **MERN Stack** with an **Expo React Native** mobile application.
+
+The project should follow clean architecture, reusable components, scalable folder structure, security best practices, and modern UI/UX.
+
+---
+
+# Technology Stack
+
+## Mobile
+
+* Expo SDK (Latest)
+* React Native
+* Expo Router
+* TypeScript
+* NativeWind (Tailwind CSS)
+* React Hook Form
+* Zod Validation
+* React Query (TanStack Query)
+* Axios
+* Zustand
+* React Native Reanimated
+* React Native Gesture Handler
+* Expo Notifications
+* Expo Secure Store
+* Expo Image Picker
+* Expo Charts (Victory Native or React Native Chart Kit)
+
+---
+
+## Backend
+
+* Node.js
+* Express.js
+* MongoDB
+* Mongoose
+* JWT Authentication
+* Bcrypt
+* Multer
+* Cloudinary (receipt uploads)
+* Express Validator
+* Helmet
+* CORS
+* Rate Limiter
+* Winston Logger
+
+---
+
+## Database
+
+MongoDB
+
+Collections
+
+* users
+* wallets
+* categories
+* transactions
+* budgets
+* savingsGoals
+* recurringTransactions
+* notifications
+* receipts
+
+---
+
+# Authentication
+
+Implement
+
+* Register
+* Login
+* Logout
+* Refresh Token
+* Forgot Password
+* Reset Password
+* Email Verification
+* JWT Authentication
+* Secure Token Storage using Expo Secure Store
+
+---
+
+# App Theme
+
+Modern fintech design.
+
+Use
+
+* Glassmorphism
+* Rounded Cards
+* Soft Shadows
+* Smooth Animations
+* Dark Mode
+* Light Mode
+* Material Icons
+* Lottie Animations
+
+---
+
+# User Features
+
+## Dashboard
+
+Show
+
+Current Balance
+
+Monthly Income
+
+Monthly Expense
+
+Savings
+
+Cash Flow
+
+Budget Remaining
+
+Financial Health Score
+
+Expense Distribution
+
+Recent Transactions
+
+Quick Actions
+
+---
+
+## Wallet Management
+
+Users can create multiple wallets.
+
+Examples
+
+Cash
+
+Bank
+
+KBZ
+
+AYA
+
+CB Bank
+
+Wave Pay
+
+Mobile Wallet
+
+Features
+
+Add Wallet
+
+Edit Wallet
+
+Delete Wallet
+
+Transfer Between Wallets
+
+Wallet Color
+
+Wallet Icon
+
+Wallet Balance
+
+---
+
+# Income Management
+
+Add Income
+
+Fields
+
+Amount
+
+Wallet
+
+Category
+
+Date
+
+Description
+
+Recurring
+
+Receipt
+
+Tags
+
+---
+
+# Expense Management
+
+Add Expense
+
+Fields
+
+Amount
+
+Wallet
+
+Category
+
+Merchant
+
+Date
+
+Location
+
+Description
+
+Receipt Image
+
+Recurring
+
+Tags
+
+Notes
+
+---
+
+# Categories
+
+Default Categories
+
+Income
+
+Salary
+
+Freelance
+
+Business
+
+Investment
+
+Gift
+
+Bonus
+
+Expense
+
+Food
+
+Transport
+
+Bills
+
+Shopping
+
+Medical
+
+Entertainment
+
+Education
+
+Travel
+
+Rent
+
+Insurance
+
+Utilities
+
+Subscription
+
+Custom Categories
+
+CRUD
+
+Color
+
+Emoji
+
+Icon
+
+---
+
+# Transaction Features
+
+Search
+
+Filter
+
+Sort
+
+Pagination
+
+Export CSV
+
+Export Excel
+
+Export PDF
+
+Duplicate Transaction
+
+Split Transaction
+
+Transaction Notes
+
+Transaction Attachments
+
+---
+
+# Budget Module
+
+Monthly Budget
+
+Weekly Budget
+
+Category Budget
+
+Wallet Budget
+
+Progress Bars
+
+Budget Alerts
+
+Overspending Warning
+
+Budget Analytics
+
+---
+
+# Savings Goals
+
+Create Goal
+
+Goal Name
+
+Target Amount
+
+Current Amount
+
+Deadline
+
+Progress
+
+Automatic Contribution
+
+Goal Completed Animation
+
+---
+
+# Bills Reminder
+
+Electricity
+
+Internet
+
+Rent
+
+Phone
+
+Loan
+
+Insurance
+
+Recurring Bills
+
+Reminder Notification
+
+Due Date Alert
+
+---
+
+# Recurring Transactions
+
+Daily
+
+Weekly
+
+Monthly
+
+Yearly
+
+Auto Generate Transactions
+
+Pause
+
+Resume
+
+Delete
+
+---
+
+# Financial Reports
+
+Daily Report
+
+Weekly Report
+
+Monthly Report
+
+Yearly Report
+
+Charts
+
+Pie Chart
+
+Line Chart
+
+Bar Chart
+
+Income vs Expense
+
+Category Analysis
+
+Wallet Analysis
+
+Cash Flow
+
+Savings Growth
+
+Budget Analysis
+
+---
+
+# Search
+
+Search by
+
+Category
+
+Wallet
+
+Merchant
+
+Tag
+
+Amount
+
+Date
+
+Keyword
+
+---
+
+# Smart Filters
+
+Today
+
+Yesterday
+
+This Week
+
+This Month
+
+This Year
+
+Custom Range
+
+Highest Expense
+
+Highest Income
+
+---
+
+# Receipt Scanner
+
+Upload Receipt
+
+OCR Ready Structure
+
+Extract
+
+Merchant
+
+Amount
+
+Date
+
+Category Suggestion
+
+---
+
+# Notifications
+
+Budget Alert
+
+Bill Reminder
+
+Goal Completed
+
+Daily Summary
+
+Weekly Summary
+
+Monthly Summary
+
+Push Notifications
+
+---
+
+# User Profile
+
+Avatar
+
+Name
+
+Currency
+
+Country
+
+Timezone
+
+Language
+
+Dark Mode
+
+PIN Lock
+
+Biometric Login
+
+Backup
+
+Delete Account
+
+---
+
+# Currency Support
+
+Multi Currency
+
+USD
+
+EUR
+
+MMK
+
+SGD
+
+THB
+
+JPY
+
+Exchange Rate Ready Architecture
+
+---
+
+# Analytics Dashboard
+
+Display
+
+Net Worth
+
+Savings Rate
+
+Expense Ratio
+
+Top Categories
+
+Top Spending Days
+
+Average Daily Spending
+
+Income Growth
+
+Expense Growth
+
+---
+
+# AI Ready Architecture
+
+Create backend endpoints prepared for future AI features
+
+Examples
+
+Expense prediction
+
+Budget suggestion
+
+Savings recommendation
+
+Automatic categorization
+
+Financial health scoring
+
+---
+
+# Backend REST APIs
+
+Authentication
+
+```
+POST /auth/register
+
+POST /auth/login
+
+POST /auth/logout
+
+POST /auth/refresh
+
+POST /auth/forgot-password
+
+POST /auth/reset-password
+```
+
+Wallets
+
+```
+GET /wallets
+
+POST /wallets
+
+PUT /wallets/:id
+
+DELETE /wallets/:id
+```
+
+Transactions
+
+```
+GET /transactions
+
+GET /transactions/:id
+
+POST /transactions
+
+PUT /transactions/:id
+
+DELETE /transactions/:id
+```
+
+Categories
+
+```
+CRUD
+```
+
+Budgets
+
+```
+CRUD
+```
+
+Savings Goals
+
+```
+CRUD
+```
+
+Reports
+
+```
+GET /reports/monthly
+
+GET /reports/yearly
+
+GET /reports/dashboard
+```
+
+Notifications
+
+```
+CRUD
+```
+
+---
+
+# Folder Structure
+
+```
+client/
+
+app/
+
+components/
+
+hooks/
+
+store/
+
+services/
+
+constants/
+
+types/
+
+utils/
+
+assets/
+
+backend/
+
+controllers/
+
+routes/
+
+middleware/
+
+models/
+
+services/
+
+utils/
+
+config/
+
+uploads/
+
+logs/
+
+```
+
+---
+
+# Security
+
+Implement
+
+JWT
+
+Password Hashing
+
+Helmet
+
+Rate Limiter
+
+CORS
+
+Request Validation
+
+Input Sanitization
+
+Mongo Injection Protection
+
+XSS Protection
+
+Secure File Upload
+
+---
+
+# UI Screens
+
+Splash
+
+Onboarding
+
+Login
+
+Register
+
+Dashboard
+
+Wallets
+
+Transactions
+
+Transaction Detail
+
+Add Transaction
+
+Edit Transaction
+
+Budgets
+
+Savings Goals
+
+Reports
+
+Notifications
+
+Settings
+
+Profile
+
+Search
+
+Category Management
+
+---
+
+# UI Requirements
+
+Responsive
+
+Smooth Animation
+
+Skeleton Loading
+
+Empty States
+
+Pull To Refresh
+
+Infinite Scroll
+
+Floating Action Button
+
+Swipe Actions
+
+Bottom Sheet
+
+Bottom Navigation
+
+Beautiful Charts
+
+Haptic Feedback
+
+Dark Mode
+
+---
+
+# State Management
+
+Use
+
+Zustand
+
+TanStack Query
+
+Optimistic Updates
+
+Caching
+
+Offline Ready Architecture
+
+---
+
+# Validation
+
+Use
+
+React Hook Form
+
+Zod
+
+Server-side Validation
+
+---
+
+# Error Handling
+
+Global Error Handler
+
+API Error Handler
+
+Network Retry
+
+Offline Handling
+
+Toast Notifications
+
+Loading States
+
+---
+
+# Testing
+
+Write
+
+Unit Tests
+
+API Tests
+
+Component Tests
+
+Integration Tests
+
+---
+
+# Documentation
+
+Generate
+
+README.md
+
+Installation Guide
+
+Environment Variables
+
+API Documentation
+
+Database Schema
+
+Deployment Guide
+
+Folder Structure Explanation
+
+---
+
+# Deliverables
+
+Generate the complete project with:
+
+* Expo React Native mobile app
+* MERN backend
+* MongoDB schema
+* REST API
+* Authentication
+* Beautiful fintech UI
+* Fully responsive screens
+* Clean architecture
+* Reusable components
+* TypeScript throughout
+* Production-ready code with comments
+* Seed data for testing
+* Docker configuration (optional)
+* Postman collection for all APIs
+* Comprehensive README with setup instructions
