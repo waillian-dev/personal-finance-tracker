@@ -16,8 +16,10 @@ import api from '../services/api';
 import { useAuthStore } from '../store/authStore';
 import { formatCurrency } from '../utils/currency';
 import { Transaction, Wallet, Category } from '../types';
+import { useThemeColors } from '../hooks/useThemeColors';
 
 export default function TransactionsScreen() {
+  const { colors, isDark } = useThemeColors();
   const router = useRouter();
   const { user } = useAuthStore();
 
@@ -104,22 +106,22 @@ export default function TransactionsScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
         <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-          <FontAwesome name="arrow-left" size={18} color="#0F172A" />
+          <FontAwesome name="arrow-left" size={18} color={colors.text} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Transaction History</Text>
+        <Text style={[styles.headerTitle, { color: colors.text }]}>Transaction History</Text>
         <View style={{ width: 40 }} />
       </View>
 
       {/* Search Input Bar */}
-      <View style={styles.searchSection}>
-        <View style={styles.searchContainer}>
+      <View style={[styles.searchSection, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
+        <View style={[styles.searchContainer, { backgroundColor: colors.inputBg }]}>
           <FontAwesome name="search" size={16} color="#94A3B8" style={styles.searchIcon} />
           <TextInput
-            style={styles.searchInput}
+            style={[styles.searchInput, { color: colors.text }]}
             placeholder="Search description, merchant..."
             value={searchQuery}
             onChangeText={setSearchQuery}
@@ -134,15 +136,15 @@ export default function TransactionsScreen() {
       </View>
 
       {/* FILTER TABS: Types */}
-      <View style={styles.filterSection}>
+      <View style={[styles.filterSection, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.typeTabs}>
           {(['all', 'income', 'expense', 'transfer'] as const).map((t) => (
             <TouchableOpacity
               key={t}
-              style={[styles.typeTab, selectedType === t && styles.typeTabActive]}
+              style={[styles.typeTab, { backgroundColor: colors.inputBg }, selectedType === t && styles.typeTabActive]}
               onPress={() => setSelectedType(t)}
             >
-              <Text style={[styles.typeTabText, selectedType === t && styles.typeTabTextActive]}>
+              <Text style={[styles.typeTabText, { color: colors.textSecondary }, selectedType === t && styles.typeTabTextActive]}>
                 {t.toUpperCase()}
               </Text>
             </TouchableOpacity>
@@ -150,13 +152,13 @@ export default function TransactionsScreen() {
         </ScrollView>
 
         {/* FILTER SLIDER: Wallets */}
-        <Text style={styles.filterSubtitle}>Filter by Wallet</Text>
+        <Text style={[styles.filterSubtitle, { color: colors.textSecondary }]}>Filter by Wallet</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterScroll}>
           <TouchableOpacity
-            style={[styles.filterCard, selectedWalletId === 'all' && styles.filterCardActive]}
+            style={[styles.filterCard, { backgroundColor: colors.inputBg, borderColor: colors.border }, selectedWalletId === 'all' && styles.filterCardActive]}
             onPress={() => setSelectedWalletId('all')}
           >
-            <Text style={[styles.filterCardText, selectedWalletId === 'all' && styles.filterCardTextActive]}>
+            <Text style={[styles.filterCardText, { color: colors.textSecondary }, selectedWalletId === 'all' && styles.filterCardTextActive]}>
               All Wallets
             </Text>
           </TouchableOpacity>
@@ -165,24 +167,25 @@ export default function TransactionsScreen() {
               key={w._id}
               style={[
                 styles.filterCard,
+                { backgroundColor: colors.inputBg, borderColor: colors.border },
                 selectedWalletId === w._id && { borderColor: w.color, borderWidth: 2 },
               ]}
               onPress={() => setSelectedWalletId(w._id)}
             >
               <View style={[styles.colorDot, { backgroundColor: w.color }]} />
-              <Text style={styles.filterCardText}>{w.name}</Text>
+              <Text style={[styles.filterCardText, { color: colors.text }]}>{w.name}</Text>
             </TouchableOpacity>
           ))}
         </ScrollView>
 
         {/* FILTER SLIDER: Categories */}
-        <Text style={styles.filterSubtitle}>Filter by Category</Text>
+        <Text style={[styles.filterSubtitle, { color: colors.textSecondary }]}>Filter by Category</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterScroll}>
           <TouchableOpacity
-            style={[styles.filterCard, selectedCategoryId === 'all' && styles.filterCardActive]}
+            style={[styles.filterCard, { backgroundColor: colors.inputBg, borderColor: colors.border }, selectedCategoryId === 'all' && styles.filterCardActive]}
             onPress={() => setSelectedCategoryId('all')}
           >
-            <Text style={[styles.filterCardText, selectedCategoryId === 'all' && styles.filterCardTextActive]}>
+            <Text style={[styles.filterCardText, { color: colors.textSecondary }, selectedCategoryId === 'all' && styles.filterCardTextActive]}>
               All Categories
             </Text>
           </TouchableOpacity>
@@ -191,12 +194,13 @@ export default function TransactionsScreen() {
               key={c._id}
               style={[
                 styles.filterCard,
+                { backgroundColor: colors.inputBg, borderColor: colors.border },
                 selectedCategoryId === c._id && { borderColor: c.color, borderWidth: 2 },
               ]}
               onPress={() => setSelectedCategoryId(c._id)}
             >
               <Text style={styles.emojiSpan}>{c.emoji}</Text>
-              <Text style={styles.filterCardText}>{c.name}</Text>
+              <Text style={[styles.filterCardText, { color: colors.text }]}>{c.name}</Text>
             </TouchableOpacity>
           ))}
         </ScrollView>
@@ -204,13 +208,13 @@ export default function TransactionsScreen() {
 
       {/* Transaction List */}
       {isLoading ? (
-        <View style={styles.loadingContainer}>
+        <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
           <ActivityIndicator size="large" color="#059669" />
         </View>
       ) : filteredTransactions.length === 0 ? (
-        <View style={styles.emptyContainer}>
-          <FontAwesome name="list-alt" size={48} color="#94A3B8" />
-          <Text style={styles.emptyText}>No matching transactions found.</Text>
+        <View style={[styles.emptyContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <FontAwesome name="list-alt" size={48} color={colors.textSecondary} />
+          <Text style={[styles.emptyText, { color: colors.textSecondary }]}>No matching transactions found.</Text>
         </View>
       ) : (
         <ScrollView
@@ -224,15 +228,15 @@ export default function TransactionsScreen() {
             return (
               <TouchableOpacity
                 key={t._id}
-                style={styles.transactionCard}
+                style={[styles.transactionCard, { backgroundColor: colors.card, borderColor: colors.border }]}
                 onPress={() => router.push(`/modal?editId=${t._id}`)}
               >
                 <View style={[styles.iconWrapper, { backgroundColor: iconInfo.bg }]}>
                   <FontAwesome name={iconInfo.icon as any} size={16} color={iconInfo.color} />
                 </View>
                 <View style={styles.detailsContainer}>
-                  <Text style={styles.txDescription}>{t.description || t.categoryId?.name}</Text>
-                  <Text style={styles.txCategory}>
+                  <Text style={[styles.txDescription, { color: colors.text }]}>{t.description || t.categoryId?.name}</Text>
+                  <Text style={[styles.txCategory, { color: colors.textSecondary }]}>
                     {t.categoryId?.emoji} {t.categoryId?.name} • {t.walletId?.name}
                     {isTransfer && t.destinationWalletId ? ` ➔ ${t.destinationWalletId.name}` : ''}
                   </Text>
@@ -247,7 +251,7 @@ export default function TransactionsScreen() {
                     {isExpense ? '-' : t.type === 'income' ? '+' : ''}
                     {formatCurrency(t.amount, user?.currency)}
                   </Text>
-                  <Text style={styles.txDate}>
+                  <Text style={[styles.txDate, { color: colors.textSecondary }]}>
                     {new Date(t.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
                   </Text>
                 </View>

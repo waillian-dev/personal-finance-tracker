@@ -2,8 +2,10 @@ import { Tabs, Link } from 'expo-router';
 import { Pressable, StyleSheet, View, Text, TouchableOpacity, Animated } from 'react-native';
 import { FontAwesome } from '@expo/vector-icons';
 import React, { useEffect, useRef } from 'react';
+import { useThemeColors } from '../../hooks/useThemeColors';
 
 function TabItem({ label, isFocused, onPress, onLongPress, iconName }: any) {
+  const { colors } = useThemeColors();
   const scaleValue = useRef(new Animated.Value(isFocused ? 1.12 : 1)).current;
   const opacityValue = useRef(new Animated.Value(isFocused ? 1 : 0.65)).current;
 
@@ -35,9 +37,9 @@ function TabItem({ label, isFocused, onPress, onLongPress, iconName }: any) {
         <FontAwesome
           name={iconName}
           size={18}
-          color={isFocused ? '#059669' : '#64748B'}
+          color={isFocused ? colors.primary : colors.textSecondary}
         />
-        <Text style={[styles.tabLabel, { color: isFocused ? '#059669' : '#64748B', fontWeight: isFocused ? '700' : '500' }]}>
+        <Text style={[styles.tabLabel, { color: isFocused ? colors.primary : colors.textSecondary, fontWeight: isFocused ? '700' : '500' }]}>
           {label}
         </Text>
       </Animated.View>
@@ -46,8 +48,9 @@ function TabItem({ label, isFocused, onPress, onLongPress, iconName }: any) {
 }
 
 function FloatingTabBar({ state, descriptors, navigation }: any) {
+  const { colors } = useThemeColors();
   return (
-    <View style={styles.tabContainer}>
+    <View style={[styles.tabContainer, { backgroundColor: colors.tabBar, borderColor: colors.tabBarBorder }]}>
       {state.routes.map((route: any, index: number) => {
         const { options } = descriptors[route.key];
         const label =

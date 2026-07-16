@@ -14,8 +14,10 @@ import api from '../services/api';
 import { Wallet, Category } from '../types';
 import { useAuthStore } from '../store/authStore';
 import { formatCurrency } from '../utils/currency';
+import { useThemeColors } from '../hooks/useThemeColors';
 
 export default function AddTransactionModal() {
+  const { colors, isDark } = useThemeColors();
   const { editId } = useLocalSearchParams();
   const [wallets, setWallets] = useState<Wallet[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -204,7 +206,7 @@ export default function AddTransactionModal() {
 
   if (isLoading) {
     return (
-      <View style={styles.loadingContainer}>
+      <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
         <ActivityIndicator size="large" color="#10B981" />
       </View>
     );
@@ -213,7 +215,7 @@ export default function AddTransactionModal() {
   const currencySymbol = user?.currency === 'MMK' ? 'Ks' : '$';
 
   return (
-    <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
+    <ScrollView contentContainerStyle={[styles.container, { backgroundColor: colors.background }]} keyboardShouldPersistTaps="handled">
       {formError ? <Text style={styles.errorText}>{formError}</Text> : null}
 
       {/* Transaction Type Buttons */}
@@ -221,10 +223,10 @@ export default function AddTransactionModal() {
         {(['expense', 'income', 'transfer'] as const).map((t) => (
           <TouchableOpacity
             key={t}
-            style={[styles.typeButton, type === t && styles.activeTypeButton]}
+            style={[styles.typeButton, { backgroundColor: colors.inputBg }, type === t && styles.activeTypeButton]}
             onPress={() => setType(t)}
           >
-            <Text style={[styles.typeButtonText, type === t && styles.activeTypeButtonText]}>
+            <Text style={[styles.typeButtonText, { color: colors.textSecondary }, type === t && styles.activeTypeButtonText]}>
               {t.toUpperCase()}
             </Text>
           </TouchableOpacity>
@@ -235,7 +237,7 @@ export default function AddTransactionModal() {
       <View style={styles.amountContainer}>
         {user?.currency !== 'MMK' ? <Text style={styles.currencySymbol}>{currencySymbol}</Text> : null}
         <TextInput
-          style={styles.amountInput}
+          style={[styles.amountInput, { color: colors.text }]}
           placeholder="0.00"
           placeholderTextColor="#475569"
           keyboardType="decimal-pad"
@@ -249,19 +251,20 @@ export default function AddTransactionModal() {
       {/* Form Fields */}
       <View style={styles.formSection}>
         {/* Source Wallet Selection */}
-        <Text style={styles.label}>{type === 'transfer' ? 'From Wallet' : 'Wallet'}</Text>
+        <Text style={[styles.label, { color: colors.textSecondary }]}>{type === 'transfer' ? 'From Wallet' : 'Wallet'}</Text>
         <View style={styles.pickerContainer}>
           {wallets.map((w) => (
             <TouchableOpacity
               key={w._id}
               style={[
                 styles.pickerItem,
+                { backgroundColor: colors.inputBg, borderColor: colors.border },
                 selectedWalletId === w._id && styles.pickerItemActive,
                 { borderLeftColor: w.color, borderLeftWidth: 4 }
               ]}
               onPress={() => setSelectedWalletId(w._id)}
             >
-              <Text style={[styles.pickerItemText, selectedWalletId === w._id && styles.pickerItemTextActive]}>
+              <Text style={[styles.pickerItemText, { color: colors.text }, selectedWalletId === w._id && styles.pickerItemTextActive]}>
                 {w.name} ({formatCurrency(w.balance, w.currency)})
               </Text>
             </TouchableOpacity>
@@ -271,19 +274,20 @@ export default function AddTransactionModal() {
         {/* Destination Wallet Selection (Only for Transfers) */}
         {type === 'transfer' ? (
           <>
-            <Text style={styles.label}>To Wallet</Text>
+            <Text style={[styles.label, { color: colors.textSecondary }]}>To Wallet</Text>
             <View style={styles.pickerContainer}>
               {wallets.map((w) => (
                 <TouchableOpacity
                   key={w._id}
                   style={[
                     styles.pickerItem,
+                    { backgroundColor: colors.inputBg, borderColor: colors.border },
                     selectedDestWalletId === w._id && styles.pickerItemActive,
                     { borderLeftColor: w.color, borderLeftWidth: 4 }
                   ]}
                   onPress={() => setSelectedDestWalletId(w._id)}
                 >
-                  <Text style={[styles.pickerItemText, selectedDestWalletId === w._id && styles.pickerItemTextActive]}>
+                  <Text style={[styles.pickerItemText, { color: colors.text }, selectedDestWalletId === w._id && styles.pickerItemTextActive]}>
                     {w.name} ({formatCurrency(w.balance, w.currency)})
                   </Text>
                 </TouchableOpacity>
@@ -295,7 +299,7 @@ export default function AddTransactionModal() {
         {/* Category Selection (Not shown for Transfers) */}
         {type !== 'transfer' ? (
           <>
-            <Text style={styles.label}>Category</Text>
+            <Text style={[styles.label, { color: colors.textSecondary }]}>Category</Text>
             <View style={styles.categoriesGrid}>
               {categories
                 .filter((c) => c.type === type)
@@ -304,13 +308,14 @@ export default function AddTransactionModal() {
                     key={c._id}
                     style={[
                       styles.categoryBubble,
+                      { backgroundColor: colors.inputBg },
                       selectedCategoryId === c._id && styles.categoryBubbleActive,
                       { borderColor: c.color }
                     ]}
                     onPress={() => setSelectedCategoryId(c._id)}
                   >
                     <Text style={styles.categoryEmoji}>{c.emoji}</Text>
-                    <Text style={styles.categoryLabel}>{c.name}</Text>
+                    <Text style={[styles.categoryLabel, { color: colors.text }]}>{c.name}</Text>
                   </TouchableOpacity>
                 ))}
             </View>
@@ -318,9 +323,9 @@ export default function AddTransactionModal() {
         ) : null}
 
         {/* Description Input */}
-        <Text style={styles.label}>Description</Text>
+        <Text style={[styles.label, { color: colors.textSecondary }]}>Description</Text>
         <TextInput
-          style={styles.textInput}
+          style={[styles.textInput, { backgroundColor: colors.inputBg, borderColor: colors.border, color: colors.text }]}
           placeholder="e.g. Starbucks coffee, utility bill"
           placeholderTextColor="#94A3B8"
           value={description}
@@ -339,52 +344,53 @@ export default function AddTransactionModal() {
                 size={18}
                 color={isSplitWithFriend ? '#059669' : '#64748B'}
               />
-              <Text style={styles.splitCheckboxLabel}>Relate / Split with Friend</Text>
+              <Text style={[styles.splitCheckboxLabel, { color: colors.text }]}>Relate / Split with Friend</Text>
             </TouchableOpacity>
 
             {isSplitWithFriend ? (
               <View style={styles.splitControls}>
-                <Text style={styles.subLabel}>Select Friend</Text>
+                <Text style={[styles.subLabel, { color: colors.textSecondary }]}>Select Friend</Text>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.friendScroll}>
                   {friends.map((item) => (
                     <TouchableOpacity
                       key={item.friendshipId}
                       style={[
                         styles.friendBubble,
+                        { backgroundColor: colors.inputBg, borderColor: colors.border },
                         selectedFriendId === item.friend._id && styles.friendBubbleActive,
                       ]}
                       onPress={() => setSelectedFriendId(item.friend._id)}
                     >
-                      <Text style={[styles.friendBubbleText, selectedFriendId === item.friend._id && styles.friendBubbleTextActive]}>
+                      <Text style={[styles.friendBubbleText, { color: colors.textSecondary }, selectedFriendId === item.friend._id && styles.friendBubbleTextActive]}>
                         {item.friend.name}
                       </Text>
                     </TouchableOpacity>
                   ))}
                 </ScrollView>
 
-                <Text style={styles.subLabel}>Split Option</Text>
+                <Text style={[styles.subLabel, { color: colors.textSecondary }]}>Split Option</Text>
                 <View style={styles.splitTypeRow}>
                   <TouchableOpacity
-                    style={[styles.splitTypeBtn, splitType === 'receivable' && styles.splitTypeBtnActive]}
+                    style={[styles.splitTypeBtn, { backgroundColor: colors.inputBg, borderColor: colors.border }, splitType === 'receivable' && styles.splitTypeBtnActive]}
                     onPress={() => setSplitType('receivable')}
                   >
-                    <Text style={[styles.splitTypeBtnText, splitType === 'receivable' && styles.splitTypeBtnTextActive]}>
+                    <Text style={[styles.splitTypeBtnText, { color: colors.textSecondary }, splitType === 'receivable' && styles.splitTypeBtnTextActive]}>
                       They Owe Me
                     </Text>
                   </TouchableOpacity>
                   <TouchableOpacity
-                    style={[styles.splitTypeBtn, splitType === 'payable' && styles.splitTypeBtnActive]}
+                    style={[styles.splitTypeBtn, { backgroundColor: colors.inputBg, borderColor: colors.border }, splitType === 'payable' && styles.splitTypeBtnActive]}
                     onPress={() => setSplitType('payable')}
                   >
-                    <Text style={[styles.splitTypeBtnText, splitType === 'payable' && styles.splitTypeBtnTextActive]}>
+                    <Text style={[styles.splitTypeBtnText, { color: colors.textSecondary }, splitType === 'payable' && styles.splitTypeBtnTextActive]}>
                       I Owe Them
                     </Text>
                   </TouchableOpacity>
                 </View>
 
-                <Text style={styles.subLabel}>Owed Amount</Text>
+                <Text style={[styles.subLabel, { color: colors.textSecondary }]}>Owed Amount</Text>
                 <TextInput
-                  style={styles.textInput}
+                  style={[styles.textInput, { backgroundColor: colors.inputBg, borderColor: colors.border, color: colors.text }]}
                   value={splitAmount}
                   onChangeText={setSplitAmount}
                   keyboardType="numeric"

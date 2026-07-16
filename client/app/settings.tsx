@@ -14,6 +14,7 @@ import {
 import { FontAwesome } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useAuthStore } from '../store/authStore';
+import { useThemeColors } from '../hooks/useThemeColors';
 import api from '../services/api';
 import { formatCurrency } from '../utils/currency';
 import { Wallet, Category } from '../types';
@@ -36,11 +37,13 @@ interface RecurringSetup {
 export default function SettingsScreen() {
   const router = useRouter();
   const { user, updateProfile, clearError, error } = useAuthStore();
+  const { colors } = useThemeColors();
 
   // Profile states
   const [name, setName] = useState(user?.name || '');
   const [monthlySalary, setMonthlySalary] = useState(user?.monthlySalary?.toString() || '0');
   const [currency, setCurrency] = useState(user?.currency || 'USD');
+  const [theme, setTheme] = useState<'light' | 'dark' | 'system'>(user?.theme || 'system');
   const [notificationSalary, setNotificationSalary] = useState(user?.notificationSalary ?? true);
   const [notificationExpenseLimit, setNotificationExpenseLimit] = useState(user?.notificationExpenseLimit ?? true);
   const [notificationMonthlyFee, setNotificationMonthlyFee] = useState(user?.notificationMonthlyFee ?? true);
@@ -123,6 +126,7 @@ export default function SettingsScreen() {
       await updateProfile({
         name,
         currency,
+        theme,
         monthlySalary: parseFloat(monthlySalary) || 0,
         notificationSalary,
         notificationExpenseLimit,
@@ -225,33 +229,33 @@ export default function SettingsScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
         <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-          <FontAwesome name="arrow-left" size={18} color="#0F172A" />
+          <FontAwesome name="arrow-left" size={18} color={colors.text} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>System Settings</Text>
+        <Text style={[styles.headerTitle, { color: colors.text }]}>System Settings</Text>
         <View style={{ width: 40 }} />
       </View>
 
       {isLoadingData ? (
-        <View style={styles.loadingContainer}>
+        <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
           <ActivityIndicator size="large" color="#059669" />
         </View>
       ) : (
         <ScrollView contentContainerStyle={styles.scrollContainer} keyboardShouldPersistTaps="handled">
           
           {/* SECTION 1: PROFILE & CURRENCY */}
-          <View style={styles.sectionCard}>
-            <Text style={styles.sectionTitle}>Profile & Preferences</Text>
+          <View style={[styles.sectionCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>Profile & Preferences</Text>
             
             {profileMsg ? <Text style={styles.successText}>{profileMsg}</Text> : null}
 
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>Display Name</Text>
+              <Text style={[styles.label, { color: colors.textSecondary }]}>Display Name</Text>
               <TextInput
-                style={styles.input}
+                style={[styles.input, { backgroundColor: colors.inputBg, borderColor: colors.border, color: colors.text }]}
                 value={name}
                 onChangeText={setName}
                 placeholder="Full Name"
@@ -260,9 +264,9 @@ export default function SettingsScreen() {
             </View>
 
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>Monthly Salary (MMK / USD)</Text>
+              <Text style={[styles.label, { color: colors.textSecondary }]}>Monthly Salary (MMK / USD)</Text>
               <TextInput
-                style={styles.input}
+                style={[styles.input, { backgroundColor: colors.inputBg, borderColor: colors.border, color: colors.text }]}
                 value={monthlySalary}
                 onChangeText={setMonthlySalary}
                 keyboardType="numeric"
@@ -272,21 +276,23 @@ export default function SettingsScreen() {
             </View>
 
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>Base Currency</Text>
+              <Text style={[styles.label, { color: colors.textSecondary }]}>Base Currency</Text>
               <View style={styles.currencyGrid}>
                 {CURRENCIES.map((c) => (
                   <TouchableOpacity
                     key={c}
                     style={[
                       styles.currencySelector,
-                      currency === c && styles.currencySelectorActive,
+                      { backgroundColor: colors.inputBg, borderColor: colors.border },
+                      currency === c && { borderColor: colors.primary, backgroundColor: colors.primaryLight },
                     ]}
                     onPress={() => setCurrency(c)}
                   >
                     <Text
                       style={[
                         styles.currencySelectorText,
-                        currency === c && styles.currencySelectorTextActive,
+                        { color: colors.textSecondary },
+                        currency === c && { color: colors.primary, fontWeight: '700' },
                       ]}
                     >
                       {c}
@@ -295,29 +301,57 @@ export default function SettingsScreen() {
                 ))}
               </View>
             </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={[styles.label, { color: colors.textSecondary }]}>Application Theme</Text>
+              <View style={styles.currencyGrid}>
+                {(['light', 'dark', 'system'] as const).map((t) => (
+                  <TouchableOpacity
+                    key={t}
+                    style={[
+                      styles.currencySelector,
+                      { backgroundColor: colors.inputBg, borderColor: colors.border },
+                      theme === t && { borderColor: colors.primary, backgroundColor: colors.primaryLight },
+                    ]}
+                    onPress={() => setTheme(t)}
+                  >
+                    <Text
+                      style={[
+                        styles.currencySelectorText,
+                        { color: colors.textSecondary },
+                        theme === t && { color: colors.primary, fontWeight: '700' },
+                        { textTransform: 'capitalize' }
+                      ]}
+                    >
+                      {t}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
           </View>
 
           {/* SECTION 2: NOTIFICATIONS TOGGLES */}
-          <View style={styles.sectionCard}>
-            <Text style={styles.sectionTitle}>Alert Warning Triggers</Text>
+          <View style={[styles.sectionCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>Alert Warning Triggers</Text>
 
             <View style={styles.switchRow}>
-              <Text style={styles.switchLabel}>Salary Credit Messages</Text>
+              <Text style={[styles.switchLabel, { color: colors.text }]}>Salary Credit Messages</Text>
               <Switch
                 value={notificationSalary}
                 onValueChange={setNotificationSalary}
-                trackColor={{ false: '#E2E8F0', true: '#A7F3D0' }}
-                thumbColor={notificationSalary ? '#059669' : '#CBD5E1'}
+                trackColor={{ false: colors.border, true: '#A7F3D0' }}
+                thumbColor={notificationSalary ? '#059669' : colors.textSecondary}
               />
             </View>
 
             <View style={styles.switchRow}>
-              <Text style={styles.switchLabel}>Expense Limit Alerts (80% Salary)</Text>
+              <Text style={[styles.switchLabel, { color: colors.text }]}>Expense Limit Alerts (80% Salary)</Text>
               <Switch
                 value={notificationExpenseLimit}
                 onValueChange={setNotificationExpenseLimit}
-                trackColor={{ false: '#E2E8F0', true: '#A7F3D0' }}
-                thumbColor={notificationExpenseLimit ? '#059669' : '#CBD5E1'}
+                trackColor={{ false: colors.border, true: '#A7F3D0' }}
+                thumbColor={notificationExpenseLimit ? '#059669' : colors.textSecondary}
               />
             </View>
 

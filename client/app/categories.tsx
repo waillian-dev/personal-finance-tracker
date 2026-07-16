@@ -14,11 +14,13 @@ import { useRouter } from 'expo-router';
 import api from '../services/api';
 import { Category } from '../types';
 import CustomAlert from '../components/CustomAlert';
+import { useThemeColors } from '../hooks/useThemeColors';
 
 const COLORS = ['#10B981', '#3B82F6', '#8B5CF6', '#F59E0B', '#EF4444', '#EC4899', '#14B8A6', '#6366F1'];
 const EMOJIS = ['📁', '🍔', '🛒', '🚗', '🎬', '🏠', '👕', '🏥', '🎓', '💼', '💰', '🎁', '✈️', '🔧', '🍕', '💡'];
 
 export default function CategoriesScreen() {
+  const { colors, isDark } = useThemeColors();
   const router = useRouter();
   const [categories, setCategories] = useState<Category[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -170,13 +172,13 @@ export default function CategoriesScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
         <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-          <FontAwesome name="arrow-left" size={18} color="#0F172A" />
+          <FontAwesome name="arrow-left" size={18} color={colors.text} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Manage Categories</Text>
+        <Text style={[styles.headerTitle, { color: colors.text }]}>Manage Categories</Text>
         <TouchableOpacity
           style={styles.addButton}
           onPress={() => {
@@ -200,7 +202,7 @@ export default function CategoriesScreen() {
       />
 
       {isLoading ? (
-        <View style={styles.loadingContainer}>
+        <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
           <ActivityIndicator size="large" color="#059669" />
         </View>
       ) : (
@@ -208,15 +210,15 @@ export default function CategoriesScreen() {
           
           {/* CATEGORY FORM CARD (Add / Edit) */}
           {isAdding && (
-            <View style={styles.formCard}>
-              <Text style={styles.formTitle}>
+            <View style={[styles.formCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+              <Text style={[styles.formTitle, { color: colors.text }]}>
                 {editingId ? 'Edit Custom Category' : 'Create Custom Category'}
               </Text>
 
               <View style={styles.inputGroup}>
-                <Text style={styles.label}>Category Name</Text>
+                <Text style={[styles.label, { color: colors.textSecondary }]}>Category Name</Text>
                 <TextInput
-                  style={styles.input}
+                  style={[styles.input, { backgroundColor: colors.inputBg, borderColor: colors.border, color: colors.text }]}
                   value={name}
                   onChangeText={setName}
                   placeholder="e.g. Shopping, Utilities"
@@ -225,10 +227,10 @@ export default function CategoriesScreen() {
               </View>
 
               <View style={styles.inputGroup}>
-                <Text style={styles.label}>Category Flow Type</Text>
+                <Text style={[styles.label, { color: colors.textSecondary }]}>Category Flow Type</Text>
                 <View style={styles.typeGrid}>
                   <TouchableOpacity
-                    style={[styles.typeBtn, type === 'expense' && styles.typeBtnActiveExpense]}
+                    style={[styles.typeBtn, { backgroundColor: colors.inputBg, borderColor: colors.border }, type === 'expense' && styles.typeBtnActiveExpense]}
                     onPress={() => setType('expense')}
                   >
                     <Text style={[styles.typeBtnText, type === 'expense' && styles.typeBtnTextActive]}>
@@ -236,7 +238,7 @@ export default function CategoriesScreen() {
                     </Text>
                   </TouchableOpacity>
                   <TouchableOpacity
-                    style={[styles.typeBtn, type === 'income' && styles.typeBtnActiveIncome]}
+                    style={[styles.typeBtn, { backgroundColor: colors.inputBg, borderColor: colors.border }, type === 'income' && styles.typeBtnActiveIncome]}
                     onPress={() => setType('income')}
                   >
                     <Text style={[styles.typeBtnText, type === 'income' && styles.typeBtnTextActive]}>
@@ -247,7 +249,7 @@ export default function CategoriesScreen() {
               </View>
 
               <View style={styles.inputGroup}>
-                <Text style={styles.label}>Select Theme Color</Text>
+                <Text style={[styles.label, { color: colors.textSecondary }]}>Select Theme Color</Text>
                 <View style={styles.colorGrid}>
                   {COLORS.map((c) => (
                     <TouchableOpacity
@@ -264,13 +266,14 @@ export default function CategoriesScreen() {
               </View>
 
               <View style={styles.inputGroup}>
-                <Text style={styles.label}>Select Emoji Icon</Text>
+                <Text style={[styles.label, { color: colors.textSecondary }]}>Select Emoji Icon</Text>
                 <View style={styles.emojiGrid}>
                   {EMOJIS.map((e) => (
                     <TouchableOpacity
                       key={e}
                       style={[
                         styles.emojiCard,
+                        { backgroundColor: colors.inputBg, borderColor: colors.border },
                         selectedEmoji === e && styles.emojiCardActive,
                       ]}
                       onPress={() => setSelectedEmoji(e)}
@@ -301,16 +304,16 @@ export default function CategoriesScreen() {
           )}
 
           {/* LIST OF CATEGORIES */}
-          <Text style={styles.sectionSubtitle}>Expense Categories</Text>
+          <Text style={[styles.sectionSubtitle, { color: colors.textSecondary }]}>Expense Categories</Text>
           {categories.filter(c => c.type === 'expense').map((cat) => (
-            <View key={cat._id} style={styles.categoryRow}>
+            <View key={cat._id} style={[styles.categoryRow, { backgroundColor: colors.card, borderColor: colors.border }]}>
               <View style={styles.catInfo}>
-                <View style={[styles.catIconWrapper, { backgroundColor: cat.color ? `${cat.color}15` : '#F1F5F9' }]}>
+                <View style={[styles.catIconWrapper, { backgroundColor: cat.color ? `${cat.color}15` : (isDark ? '#334155' : '#F1F5F9') }]}>
                   <Text style={styles.catEmoji}>{cat.emoji || '📁'}</Text>
                 </View>
                 <View>
-                  <Text style={styles.catName}>{cat.name}</Text>
-                  <Text style={styles.catMeta}>
+                  <Text style={[styles.catName, { color: colors.text }]}>{cat.name}</Text>
+                  <Text style={[styles.catMeta, { color: colors.textSecondary }]}>
                     {cat.userId ? 'Custom' : 'System Default'}
                   </Text>
                 </View>
@@ -329,16 +332,16 @@ export default function CategoriesScreen() {
             </View>
           ))}
 
-          <Text style={[styles.sectionSubtitle, { marginTop: 24 }]}>Income Categories</Text>
+          <Text style={[styles.sectionSubtitle, { color: colors.textSecondary, marginTop: 24 }]}>Income Categories</Text>
           {categories.filter(c => c.type === 'income').map((cat) => (
-            <View key={cat._id} style={styles.categoryRow}>
+            <View key={cat._id} style={[styles.categoryRow, { backgroundColor: colors.card, borderColor: colors.border }]}>
               <View style={styles.catInfo}>
-                <View style={[styles.catIconWrapper, { backgroundColor: cat.color ? `${cat.color}15` : '#F1F5F9' }]}>
+                <View style={[styles.catIconWrapper, { backgroundColor: cat.color ? `${cat.color}15` : (isDark ? '#334155' : '#F1F5F9') }]}>
                   <Text style={styles.catEmoji}>{cat.emoji || '💰'}</Text>
                 </View>
                 <View>
-                  <Text style={styles.catName}>{cat.name}</Text>
-                  <Text style={styles.catMeta}>
+                  <Text style={[styles.catName, { color: colors.text }]}>{cat.name}</Text>
+                  <Text style={[styles.catMeta, { color: colors.textSecondary }]}>
                     {cat.userId ? 'Custom' : 'System Default'}
                   </Text>
                 </View>

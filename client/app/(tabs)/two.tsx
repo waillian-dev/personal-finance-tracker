@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   StyleSheet,
   Text,
@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
   RefreshControl,
   SafeAreaView,
+  Animated,
 } from 'react-native';
 import { FontAwesome } from '@expo/vector-icons';
 import api from '../../services/api';
@@ -16,6 +17,7 @@ import { Wallet } from '../../types';
 import { useAuthStore } from '../../store/authStore';
 import { formatCurrency } from '../../utils/currency';
 import CustomAlert from '../../components/CustomAlert';
+import { useThemeColors } from '../../hooks/useThemeColors';
 
 const COLORS = ['#10B981', '#3B82F6', '#8B5CF6', '#F59E0B', '#EF4444', '#EC4899'];
 const TYPES = [
@@ -26,7 +28,152 @@ const TYPES = [
   { label: 'Other', value: 'other', icon: 'question-circle' },
 ];
 
+function AnimatedFormCard({ children, colors }: any) {
+  const formOpacity = useRef(new Animated.Value(0)).current;
+  const formTranslateY = useRef(new Animated.Value(-15)).current;
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(formOpacity, {
+        toValue: 1,
+        duration: 300,
+        useNativeDriver: true,
+      }),
+      Animated.timing(formTranslateY, {
+        toValue: 0,
+        duration: 300,
+        useNativeDriver: true,
+      })
+    ]).start();
+  }, []);
+
+  return (
+    <Animated.View style={{ opacity: formOpacity, transform: [{ translateY: formTranslateY }] }}>
+      <View style={[styles.formCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+        {children}
+      </View>
+    </Animated.View>
+  );
+}
+
+function WalletCardItem({ wallet, index, handleStartEditWallet, handleDeleteWallet, colors, user }: any) {
+  const cardFade = useRef(new Animated.Value(0)).current;
+  const cardSlide = useRef(new Animated.Value(25)).current;
+  const cardScale = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(cardFade, {
+        toValue: 1,
+        duration: 500,
+        delay: index * 80,
+        useNativeDriver: true,
+      }),
+      Animated.timing(cardSlide, {
+        toValue: 0,
+        duration: 500,
+        delay: index * 80,
+        useNativeDriver: true,
+      })
+    ]).start();
+  }, []);
+
+  const animatePress = () => {
+    Animated.sequence([
+      Animated.timing(cardScale, {
+        toValue: 0.95,
+        duration: 80,
+        useNativeDriver: true,
+      }),
+      Animated.spring(cardScale, {
+        toValue: 1,
+        friction: 3,
+        tension: 40,
+        useNativeDriver: true,
+      })
+    ]).start();
+  };
+
+  const isCreditCard = wallet.type === 'credit_card';
+  const limit = wallet.creditLimit || 0;
+  const remainingCredit = limit + Number(wallet.balance);
+  const currentDebt = -Number(wallet.balance);
+
+  return (
+    <Animated.View style={{ opacity: cardFade, transform: [{ translateY: cardSlide }, { scale: cardScale }] }}>
+      <TouchableOpacity
+        activeOpacity={0.9}
+        onPress={animatePress}
+        style={[styles.walletCard, { backgroundColor: wallet.color }]}
+      >
+        <View style={styles.cardHeader}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <View style={styles.cardIconWrapper}>
+              <FontAwesome
+                name={
+                  wallet.type === 'bank'
+                    ? 'bank'
+                    : wallet.type === 'mobile_wallet'
+                    ? 'mobile'
+                    : wallet.type === 'credit_card'
+                    ? 'credit-card'
+                    : 'money'
+                }
+                size={14}
+                color="#FFFFFF"
+              />
+            </View>
+            <Text style={styles.cardTypeLabel}>
+              {wallet.type.replace('_', ' ').toUpperCase()}
+            </Text>
+          </View>
+          <View style={{ flexDirection: 'row', gap: 12 }}>
+            <TouchableOpacity onPress={() => handleStartEditWallet(wallet)}>
+              <FontAwesome name="pencil" size={14} color="#FFFFFF" style={{ opacity: 0.8 }} />
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => handleDeleteWallet(wallet)}>
+              <FontAwesome name="trash" size={14} color="#FFFFFF" style={{ opacity: 0.8 }} />
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {isCreditCard ? (
+          <View style={styles.creditCardData}>
+            <View>
+              <Text style={styles.creditSubLabel}>Available Credit</Text>
+              <Text style={styles.cardBalance}>
+                {formatCurrency(remainingCredit, wallet.currency)}
+              </Text>
+            </View>
+            <View style={styles.creditDetailsRow}>
+              <View>
+                <Text style={styles.creditSubLabelSmall}>Total Limit</Text>
+                <Text style={styles.creditDetailVal}>
+                  {formatCurrency(limit, wallet.currency)}
+                </Text>
+              </View>
+              <View style={{ alignItems: 'flex-end' }}>
+                <Text style={styles.creditSubLabelSmall}>Current Debt</Text>
+                <Text style={[styles.creditDetailVal, { color: '#FEE2E2' }]}>
+                  {formatCurrency(currentDebt, wallet.currency)}
+                </Text>
+              </View>
+            </View>
+          </View>
+        ) : (
+          <Text style={styles.cardBalance}>
+            {formatCurrency(wallet.balance, wallet.currency)}
+          </Text>
+        )}
+
+        <Text style={styles.cardName}>{wallet.name}</Text>
+      </TouchableOpacity>
+    </Animated.View>
+  );
+}
+
 export default function WalletsScreen() {
+  const { colors, isDark } = useThemeColors();
   const [wallets, setWallets] = useState<Wallet[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -179,14 +326,14 @@ export default function WalletsScreen() {
 
   if (isLoading) {
     return (
-      <View style={styles.loadingContainer}>
+      <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
         <ActivityIndicator size="large" color="#10B981" />
       </View>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <ScrollView
         contentContainerStyle={styles.scrollContainer}
         refreshControl={
@@ -194,7 +341,7 @@ export default function WalletsScreen() {
         }
       >
         <View style={styles.headerRow}>
-          <Text style={styles.title}>My Wallets</Text>
+          <Text style={[styles.title, { color: colors.text }]}>My Wallets</Text>
           <TouchableOpacity
             style={styles.addButton}
             onPress={() => {
@@ -209,14 +356,14 @@ export default function WalletsScreen() {
 
         {/* Add Wallet Form */}
         {isAdding ? (
-          <View style={styles.formCard}>
-            <Text style={styles.formTitle}>New Wallet Details</Text>
+          <AnimatedFormCard colors={colors}>
+            <Text style={[styles.formTitle, { color: colors.text }]}>New Wallet Details</Text>
             {formError ? <Text style={styles.errorText}>{formError}</Text> : null}
 
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>Wallet Name</Text>
+              <Text style={[styles.label, { color: colors.textSecondary }]}>Wallet Name</Text>
               <TextInput
-                style={styles.input}
+                style={[styles.input, { backgroundColor: colors.inputBg, borderColor: colors.border, color: colors.text }]}
                 placeholder="e.g. Chase Bank, Pocket Cash"
                 placeholderTextColor="#94A3B8"
                 value={name}
@@ -225,11 +372,11 @@ export default function WalletsScreen() {
             </View>
 
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>
+              <Text style={[styles.label, { color: colors.textSecondary }]}>
                 {selectedType === 'credit_card' ? 'Current Debt (Starting spent amount)' : 'Initial Balance'}
               </Text>
               <TextInput
-                style={styles.input}
+                style={[styles.input, { backgroundColor: colors.inputBg, borderColor: colors.border, color: colors.text }]}
                 placeholder="0.00"
                 placeholderTextColor="#94A3B8"
                 keyboardType="numeric"
@@ -241,9 +388,9 @@ export default function WalletsScreen() {
             {/* Credit Limit Input for Credit Card type */}
             {selectedType === 'credit_card' ? (
               <View style={styles.inputGroup}>
-                <Text style={styles.label}>Credit Limit</Text>
+                <Text style={[styles.label, { color: colors.textSecondary }]}>Credit Limit</Text>
                 <TextInput
-                  style={styles.input}
+                  style={[styles.input, { backgroundColor: colors.inputBg, borderColor: colors.border, color: colors.text }]}
                   placeholder="e.g. 5000"
                   placeholderTextColor="#94A3B8"
                   keyboardType="numeric"
@@ -254,26 +401,28 @@ export default function WalletsScreen() {
             ) : null}
 
             {/* Type Selector */}
-            <Text style={styles.label}>Wallet Type</Text>
+            <Text style={[styles.label, { color: colors.textSecondary }]}>Wallet Type</Text>
             <View style={styles.typeGrid}>
               {TYPES.map((t) => (
                 <TouchableOpacity
                   key={t.value}
                   style={[
                     styles.typeSelector,
-                    selectedType === t.value && styles.typeSelectorActive,
+                    { backgroundColor: colors.inputBg, borderColor: colors.border },
+                    selectedType === t.value && { backgroundColor: colors.primary, borderColor: colors.primary },
                   ]}
                   onPress={() => setSelectedType(t.value)}
                 >
                   <FontAwesome
                     name={t.icon as any}
                     size={16}
-                    color={selectedType === t.value ? '#FFFFFF' : '#94A3B8'}
+                    color={selectedType === t.value ? '#FFFFFF' : colors.textSecondary}
                   />
                   <Text
                     style={[
                       styles.typeSelectorText,
-                      selectedType === t.value && styles.typeSelectorTextActive,
+                      { color: colors.textSecondary },
+                      selectedType === t.value && { color: '#FFFFFF', fontWeight: 'bold' },
                     ]}
                   >
                     {t.label}
@@ -283,7 +432,7 @@ export default function WalletsScreen() {
             </View>
 
             {/* Color Selector */}
-            <Text style={styles.label}>Card Theme Color</Text>
+            <Text style={[styles.label, { color: colors.textSecondary }]}>Card Theme Color</Text>
             <View style={styles.colorGrid}>
               {COLORS.map((c) => (
                 <TouchableOpacity
@@ -311,95 +460,28 @@ export default function WalletsScreen() {
                 </Text>
               )}
             </TouchableOpacity>
-          </View>
+          </AnimatedFormCard>
         ) : null}
 
         {/* Wallets Cards List */}
         {wallets.length === 0 ? (
-          <View style={styles.emptyContainer}>
-            <FontAwesome name="credit-card" size={48} color="#475569" />
-            <Text style={styles.emptyText}>No wallets created yet.</Text>
+          <View style={[styles.emptyContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <FontAwesome name="credit-card" size={48} color={colors.textSecondary} />
+            <Text style={[styles.emptyText, { color: colors.textSecondary }]}>No wallets created yet.</Text>
           </View>
         ) : (
           <View style={styles.cardsList}>
-            {wallets.map((wallet) => {
-              const isCreditCard = wallet.type === 'credit_card';
-              const limit = wallet.creditLimit || 0;
-              // remaining credit = limit + balance (since balance is negative spent)
-              const remainingCredit = limit + Number(wallet.balance);
-              const currentDebt = -Number(wallet.balance);
-
-              return (
-                <View
-                  key={wallet._id}
-                  style={[styles.walletCard, { backgroundColor: wallet.color }]}
-                >
-                  <View style={styles.cardHeader}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                      <View style={styles.cardIconWrapper}>
-                        <FontAwesome
-                          name={
-                            wallet.type === 'bank'
-                              ? 'bank'
-                              : wallet.type === 'mobile_wallet'
-                              ? 'mobile'
-                              : wallet.type === 'credit_card'
-                              ? 'credit-card'
-                              : 'money'
-                          }
-                          size={14}
-                          color="#FFFFFF"
-                        />
-                      </View>
-                      <Text style={styles.cardTypeLabel}>
-                        {wallet.type.replace('_', ' ').toUpperCase()}
-                      </Text>
-                    </View>
-                    <View style={{ flexDirection: 'row', gap: 12 }}>
-                      <TouchableOpacity onPress={() => handleStartEditWallet(wallet)}>
-                        <FontAwesome name="pencil" size={14} color="#FFFFFF" style={{ opacity: 0.8 }} />
-                      </TouchableOpacity>
-                      <TouchableOpacity onPress={() => handleDeleteWallet(wallet)}>
-                        <FontAwesome name="trash" size={14} color="#FFFFFF" style={{ opacity: 0.8 }} />
-                      </TouchableOpacity>
-                    </View>
-                  </View>
-
-                  {isCreditCard ? (
-                    /* Credit Card UI Display */
-                    <View style={styles.creditCardData}>
-                      <View>
-                        <Text style={styles.creditSubLabel}>Available Credit</Text>
-                        <Text style={styles.cardBalance}>
-                          {formatCurrency(remainingCredit, wallet.currency)}
-                        </Text>
-                      </View>
-                      <View style={styles.creditDetailsRow}>
-                        <View>
-                          <Text style={styles.creditSubLabelSmall}>Total Limit</Text>
-                          <Text style={styles.creditDetailVal}>
-                            {formatCurrency(limit, wallet.currency)}
-                          </Text>
-                        </View>
-                        <View style={{ alignItems: 'flex-end' }}>
-                          <Text style={styles.creditSubLabelSmall}>Current Debt</Text>
-                          <Text style={[styles.creditDetailVal, { color: '#FEE2E2' }]}>
-                            {formatCurrency(currentDebt, wallet.currency)}
-                          </Text>
-                        </View>
-                      </View>
-                    </View>
-                  ) : (
-                    /* Standard Wallet Display */
-                    <Text style={styles.cardBalance}>
-                      {formatCurrency(wallet.balance, wallet.currency)}
-                    </Text>
-                  )}
-
-                  <Text style={styles.cardName}>{wallet.name}</Text>
-                </View>
-              );
-            })}
+            {wallets.map((wallet, index) => (
+              <WalletCardItem
+                key={wallet._id}
+                wallet={wallet}
+                index={index}
+                handleStartEditWallet={handleStartEditWallet}
+                handleDeleteWallet={handleDeleteWallet}
+                colors={colors}
+                user={user}
+              />
+            ))}
           </View>
         )}
       </ScrollView>

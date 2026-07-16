@@ -15,6 +15,7 @@ import api from '../../services/api';
 import { useAuthStore } from '../../store/authStore';
 import { formatCurrency } from '../../utils/currency';
 import CustomAlert from '../../components/CustomAlert';
+import { useThemeColors } from '../../hooks/useThemeColors';
 
 interface FriendItem {
   friendshipId: string;
@@ -36,6 +37,7 @@ interface PendingItem {
 }
 
 export default function FriendsScreen() {
+  const { colors, isDark } = useThemeColors();
   const router = useRouter();
   const { user } = useAuthStore();
   const [friends, setFriends] = useState<FriendItem[]>([]);
@@ -121,10 +123,10 @@ export default function FriendsScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Friends & Ledgers</Text>
+      <View style={[styles.header, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
+        <Text style={[styles.headerTitle, { color: colors.text }]}>Friends & Ledgers</Text>
       </View>
 
       <CustomAlert
@@ -138,18 +140,18 @@ export default function FriendsScreen() {
       />
 
       {isLoading ? (
-        <View style={styles.loadingContainer}>
+        <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
           <ActivityIndicator size="large" color="#059669" />
         </View>
       ) : (
         <ScrollView contentContainerStyle={styles.scrollContainer} keyboardShouldPersistTaps="handled">
           
           {/* ADD FRIEND CARD */}
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>Add Friend by Email</Text>
+          <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <Text style={[styles.cardTitle, { color: colors.text }]}>Add Friend by Email</Text>
             <View style={styles.addFriendRow}>
               <TextInput
-                style={styles.input}
+                style={[styles.input, { backgroundColor: colors.inputBg, borderColor: colors.border, color: colors.text }]}
                 value={email}
                 onChangeText={setEmail}
                 placeholder="friend@example.com"
@@ -174,12 +176,12 @@ export default function FriendsScreen() {
           {/* PENDING INCOMING REQUESTS */}
           {pendingIncoming.length > 0 && (
             <View style={styles.section}>
-              <Text style={styles.sectionHeader}>Incoming Requests ({pendingIncoming.length})</Text>
+              <Text style={[styles.sectionHeader, { color: colors.textSecondary }]}>Incoming Requests ({pendingIncoming.length})</Text>
               {pendingIncoming.map((item) => (
-                <View key={item.friendshipId} style={styles.requestCard}>
+                <View key={item.friendshipId} style={[styles.requestCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
                   <View style={styles.requestInfo}>
-                    <Text style={styles.friendName}>{item.friend.name}</Text>
-                    <Text style={styles.friendEmail}>{item.friend.email}</Text>
+                    <Text style={[styles.friendName, { color: colors.text }]}>{item.friend.name}</Text>
+                    <Text style={[styles.friendEmail, { color: colors.textSecondary }]}>{item.friend.email}</Text>
                   </View>
                   <View style={styles.requestActions}>
                     <TouchableOpacity
@@ -203,12 +205,12 @@ export default function FriendsScreen() {
           {/* OUTGOING SENT REQUESTS */}
           {pendingOutgoing.length > 0 && (
             <View style={styles.section}>
-              <Text style={styles.sectionHeader}>Sent Requests</Text>
+              <Text style={[styles.sectionHeader, { color: colors.textSecondary }]}>Sent Requests</Text>
               {pendingOutgoing.map((item) => (
-                <View key={item.friendshipId} style={styles.friendRow}>
+                <View key={item.friendshipId} style={[styles.friendRow, { backgroundColor: colors.card, borderColor: colors.border }]}>
                   <View>
-                    <Text style={styles.friendName}>{item.friend.name}</Text>
-                    <Text style={styles.friendEmail}>{item.friend.email}</Text>
+                    <Text style={[styles.friendName, { color: colors.text }]}>{item.friend.name}</Text>
+                    <Text style={[styles.friendEmail, { color: colors.textSecondary }]}>{item.friend.email}</Text>
                   </View>
                   <View style={styles.pendingBadge}>
                     <Text style={styles.pendingBadgeText}>Pending</Text>
@@ -220,11 +222,11 @@ export default function FriendsScreen() {
 
           {/* ACTIVE FRIENDS LIST */}
           <View style={styles.section}>
-            <Text style={styles.sectionHeader}>My Friends</Text>
+            <Text style={[styles.sectionHeader, { color: colors.textSecondary }]}>My Friends</Text>
             {friends.length === 0 ? (
-              <View style={styles.emptyContainer}>
-                <FontAwesome name="users" size={40} color="#94A3B8" />
-                <Text style={styles.emptyText}>You haven't added any friends yet.</Text>
+              <View style={[styles.emptyContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                <FontAwesome name="users" size={40} color={colors.textSecondary} />
+                <Text style={[styles.emptyText, { color: colors.textSecondary }]}>You haven't added any friends yet.</Text>
               </View>
             ) : (
               friends.map((item) => {
@@ -235,7 +237,7 @@ export default function FriendsScreen() {
                 return (
                   <TouchableOpacity
                     key={item.friendshipId}
-                    style={styles.friendCard}
+                    style={[styles.friendCard, { backgroundColor: colors.card, borderColor: colors.border }]}
                     onPress={() =>
                       router.push({
                         pathname: '/friend-ledger',
@@ -244,14 +246,14 @@ export default function FriendsScreen() {
                     }
                   >
                     <View style={styles.friendCardLeft}>
-                      <View style={styles.avatarPlaceholder}>
-                        <Text style={styles.avatarText}>
+                      <View style={[styles.avatarPlaceholder, { backgroundColor: isDark ? '#115E59' : '#D1FAE5' }]}>
+                        <Text style={[styles.avatarText, { color: isDark ? '#2DD4BF' : '#059669' }]}>
                           {item.friend.name.charAt(0).toUpperCase()}
                         </Text>
                       </View>
                       <View>
-                        <Text style={styles.friendCardName}>{item.friend.name}</Text>
-                        <Text style={styles.friendCardEmail}>{item.friend.email}</Text>
+                        <Text style={[styles.friendCardName, { color: colors.text }]}>{item.friend.name}</Text>
+                        <Text style={[styles.friendCardEmail, { color: colors.textSecondary }]}>{item.friend.email}</Text>
                       </View>
                     </View>
                     <View style={styles.friendCardRight}>

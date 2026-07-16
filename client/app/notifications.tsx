@@ -14,6 +14,7 @@ import api from '../services/api';
 import { useAuthStore } from '../store/authStore';
 import { formatCurrency } from '../utils/currency';
 import { Transaction, Wallet } from '../types';
+import { useThemeColors } from '../hooks/useThemeColors';
 
 interface AppNotification {
   id: string;
@@ -24,6 +25,7 @@ interface AppNotification {
 }
 
 export default function NotificationsScreen() {
+  const { colors, isDark } = useThemeColors();
   const router = useRouter();
   const { user } = useAuthStore();
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
@@ -126,43 +128,43 @@ export default function NotificationsScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Custom Header Section */}
-      <View style={styles.header}>
+      <View style={[styles.header, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
         <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-          <FontAwesome name="arrow-left" size={18} color="#0F172A" />
+          <FontAwesome name="arrow-left" size={18} color={colors.text} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Notifications</Text>
+        <Text style={[styles.headerTitle, { color: colors.text }]}>Notifications</Text>
         <View style={{ width: 40 }} />
       </View>
 
       {isLoading ? (
-        <View style={styles.loadingContainer}>
+        <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
           <ActivityIndicator size="large" color="#059669" />
         </View>
       ) : notifications.length === 0 ? (
-        <View style={styles.emptyContainer}>
-          <FontAwesome name="bell-slash-o" size={48} color="#64748B" />
-          <Text style={styles.emptyText}>No notifications at the moment.</Text>
-          <Text style={styles.emptySubtext}>Enabled settings can be preconfigured in settings.</Text>
+        <View style={[styles.emptyContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <FontAwesome name="bell-slash-o" size={48} color={colors.textSecondary} />
+          <Text style={[styles.emptyText, { color: colors.text }]}>No notifications at the moment.</Text>
+          <Text style={[styles.emptySubtext, { color: colors.textSecondary }]}>Enabled settings can be preconfigured in settings.</Text>
         </View>
       ) : (
         <ScrollView contentContainerStyle={styles.scrollContainer}>
           {notifications.map((n) => {
             const iconInfo = getNotificationIconInfo(n.type);
             return (
-              <View key={n.id} style={styles.notificationCard}>
+              <View key={n.id} style={[styles.notificationCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
                 <View style={[styles.iconWrapper, { backgroundColor: iconInfo.bg }]}>
                   <FontAwesome name={iconInfo.icon as any} size={18} color={iconInfo.color} />
                 </View>
                 <View style={styles.contentWrapper}>
                   <View style={styles.cardHeader}>
-                    <Text style={styles.cardTitle}>{n.title}</Text>
-                    <Text style={styles.cardDate}>
+                    <Text style={[styles.cardTitle, { color: colors.text }]}>{n.title}</Text>
+                    <Text style={[styles.cardDate, { color: colors.textSecondary }]}>
                       {n.date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
                     </Text>
                   </View>
-                  <Text style={styles.cardMessage}>{n.message}</Text>
+                  <Text style={[styles.cardMessage, { color: colors.textSecondary }]}>{n.message}</Text>
                 </View>
               </View>
             );

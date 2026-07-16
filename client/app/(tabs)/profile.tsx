@@ -12,8 +12,10 @@ import { useRouter } from 'expo-router';
 import { useAuthStore } from '../../store/authStore';
 import { formatCurrency } from '../../utils/currency';
 import CustomAlert from '../../components/CustomAlert';
+import { useThemeColors } from '../../hooks/useThemeColors';
 
 export default function ProfileScreen() {
+  const { colors, isDark } = useThemeColors();
   const { user, logout } = useAuthStore();
   const router = useRouter();
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
@@ -31,89 +33,89 @@ export default function ProfileScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <ScrollView contentContainerStyle={styles.scrollContainer} keyboardShouldPersistTaps="handled">
         {/* Profile Avatar Card */}
         <View style={styles.avatarSection}>
-          <View style={styles.avatarCircle}>
-            <Text style={styles.avatarText}>
+          <View style={[styles.avatarCircle, { backgroundColor: isDark ? '#115E59' : '#D1FAE5' }]}>
+            <Text style={[styles.avatarText, { color: isDark ? '#2DD4BF' : '#059669' }]}>
               {user?.name ? user.name.charAt(0).toUpperCase() : 'U'}
             </Text>
           </View>
-          <Text style={styles.userName}>{user?.name || 'User'}</Text>
-          <Text style={styles.userEmail}>{user?.email || 'user@example.com'}</Text>
+          <Text style={[styles.userName, { color: colors.text }]}>{user?.name || 'User'}</Text>
+          <Text style={[styles.userEmail, { color: colors.textSecondary }]}>{user?.email || 'user@example.com'}</Text>
         </View>
 
         {/* PROFILE DETAILS DISPLAY */}
-        <View style={styles.detailsCard}>
+        <View style={[styles.detailsCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <View style={styles.detailRow}>
-            <View style={styles.detailIconWrapper}>
+            <View style={[styles.detailIconWrapper, { backgroundColor: isDark ? '#334155' : '#F1F5F9' }]}>
               <FontAwesome name="money" size={16} color="#10B981" />
             </View>
             <View style={styles.detailTextContainer}>
-              <Text style={styles.detailLabel}>Base Currency</Text>
-              <Text style={styles.detailValue}>{user?.currency || 'USD'}</Text>
+              <Text style={[styles.detailLabel, { color: colors.textSecondary }]}>Base Currency</Text>
+              <Text style={[styles.detailValue, { color: colors.text }]}>{user?.currency || 'USD'}</Text>
             </View>
           </View>
 
           <View style={styles.detailRow}>
-            <View style={styles.detailIconWrapper}>
+            <View style={[styles.detailIconWrapper, { backgroundColor: isDark ? '#334155' : '#F1F5F9' }]}>
               <FontAwesome name="dollar" size={16} color="#F59E0B" />
             </View>
             <View style={styles.detailTextContainer}>
-              <Text style={styles.detailLabel}>Monthly Salary Baseline</Text>
-              <Text style={styles.detailValue}>
+              <Text style={[styles.detailLabel, { color: colors.textSecondary }]}>Monthly Salary Baseline</Text>
+              <Text style={[styles.detailValue, { color: colors.text }]}>
                 {formatCurrency(user?.monthlySalary || 0, user?.currency)}
               </Text>
             </View>
           </View>
 
           <View style={[styles.detailRow, styles.lastDetailRow]}>
-            <View style={styles.detailIconWrapper}>
+            <View style={[styles.detailIconWrapper, { backgroundColor: isDark ? '#334155' : '#F1F5F9' }]}>
               <FontAwesome name="shield" size={16} color="#3B82F6" />
             </View>
             <View style={styles.detailTextContainer}>
-              <Text style={styles.detailLabel}>Account Status</Text>
-              <Text style={styles.detailValue}>
+              <Text style={[styles.detailLabel, { color: colors.textSecondary }]}>Account Status</Text>
+              <Text style={[styles.detailValue, { color: colors.text }]}>
                 {user?.isVerified ? 'Verified' : 'Active'}
               </Text>
             </View>
           </View>
         </View>
 
-        <Text style={styles.sectionHeader}>Notification Config</Text>
-        <View style={[styles.detailsCard, { marginBottom: 24 }]}>
+        <Text style={[styles.sectionHeader, { color: colors.textSecondary }]}>Notification Config</Text>
+        <View style={[styles.detailsCard, { backgroundColor: colors.card, borderColor: colors.border, marginBottom: 24 }]}>
           <View style={styles.detailRow}>
-            <View style={styles.detailIconWrapper}>
+            <View style={[styles.detailIconWrapper, { backgroundColor: isDark ? '#334155' : '#F1F5F9' }]}>
               <FontAwesome name="bell" size={15} color="#059669" />
             </View>
             <View style={styles.detailTextContainer}>
-              <Text style={styles.detailLabel}>Salary Credit Reminders</Text>
-              <Text style={styles.detailValue}>
+              <Text style={[styles.detailLabel, { color: colors.textSecondary }]}>Salary Credit Reminders</Text>
+              <Text style={[styles.detailValue, { color: colors.text }]}>
                 {user?.notificationSalary !== false ? 'Enabled' : 'Disabled'}
               </Text>
             </View>
           </View>
 
           <View style={styles.detailRow}>
-            <View style={styles.detailIconWrapper}>
+            <View style={[styles.detailIconWrapper, { backgroundColor: isDark ? '#334155' : '#F1F5F9' }]}>
               <FontAwesome name="warning" size={15} color="#EF4444" />
             </View>
             <View style={styles.detailTextContainer}>
-              <Text style={styles.detailLabel}>Monthly Expense Warning (80% Limit)</Text>
-              <Text style={styles.detailValue}>
+              <Text style={[styles.detailLabel, { color: colors.textSecondary }]}>Monthly Expense Warning (80% Limit)</Text>
+              <Text style={[styles.detailValue, { color: colors.text }]}>
                 {user?.notificationExpenseLimit !== false ? 'Enabled' : 'Disabled'}
               </Text>
             </View>
           </View>
 
           <View style={[styles.detailRow, styles.lastDetailRow]}>
-            <View style={styles.detailIconWrapper}>
+            <View style={[styles.detailIconWrapper, { backgroundColor: isDark ? '#334155' : '#F1F5F9' }]}>
               <FontAwesome name="info-circle" size={15} color="#3B82F6" />
             </View>
             <View style={styles.detailTextContainer}>
-              <Text style={styles.detailLabel}>Monthly Card Fee Warnings</Text>
-              <Text style={styles.detailValue}>
+              <Text style={[styles.detailLabel, { color: colors.textSecondary }]}>Monthly Card Fee Warnings</Text>
+              <Text style={[styles.detailValue, { color: colors.text }]}>
                 {user?.notificationMonthlyFee !== false ? 'Enabled' : 'Disabled'}
               </Text>
             </View>

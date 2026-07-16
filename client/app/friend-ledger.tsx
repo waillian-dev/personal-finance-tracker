@@ -15,6 +15,7 @@ import api from '../services/api';
 import { useAuthStore } from '../store/authStore';
 import { formatCurrency } from '../utils/currency';
 import CustomAlert from '../components/CustomAlert';
+import { useThemeColors } from '../hooks/useThemeColors';
 
 interface LedgerItem {
   _id: string;
@@ -33,6 +34,7 @@ interface LedgerItem {
 }
 
 export default function FriendLedgerScreen() {
+  const { colors, isDark } = useThemeColors();
   const router = useRouter();
   const { friendId, friendName } = useLocalSearchParams();
   const { user } = useAuthStore();
@@ -207,13 +209,13 @@ export default function FriendLedgerScreen() {
   const absBalance = Math.abs(netBalance);
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
         <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-          <FontAwesome name="arrow-left" size={18} color="#0F172A" />
+          <FontAwesome name="arrow-left" size={18} color={colors.text} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>{friendName || 'Ledger'}</Text>
+        <Text style={[styles.headerTitle, { color: colors.text }]}>{friendName || 'Ledger'}</Text>
         <TouchableOpacity style={styles.settleHeaderBtn} onPress={handleSettleUp}>
           <Text style={styles.settleHeaderBtnText}>Settle</Text>
         </TouchableOpacity>
@@ -230,7 +232,7 @@ export default function FriendLedgerScreen() {
       />
 
       {isLoading ? (
-        <View style={styles.loadingContainer}>
+        <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
           <ActivityIndicator size="large" color="#059669" />
         </View>
       ) : (
@@ -239,17 +241,17 @@ export default function FriendLedgerScreen() {
           {/* NET BALANCE DISPLAY */}
           <View style={[
             styles.balanceBanner,
-            owesMe ? styles.bannerOwesMe : iOwe ? styles.bannerIOwe : styles.bannerSettled
+            owesMe ? styles.bannerOwesMe : iOwe ? styles.bannerIOwe : [styles.bannerSettled, { backgroundColor: colors.card, borderColor: colors.border }]
           ]}>
             <View style={styles.bannerInfo}>
               <FontAwesome
                 name={owesMe ? 'arrow-circle-down' : iOwe ? 'arrow-circle-up' : 'check-circle'}
                 size={22}
-                color={owesMe ? '#10B981' : iOwe ? '#EF4444' : '#64748B'}
+                color={owesMe ? '#10B981' : iOwe ? '#EF4444' : colors.textSecondary}
               />
               <Text style={[
                 styles.bannerText,
-                { color: owesMe ? '#047857' : iOwe ? '#B91C1C' : '#334155' }
+                { color: owesMe ? '#047857' : iOwe ? '#B91C1C' : colors.text }
               ]}>
                 {owesMe
                   ? `${friendName} owes you ${formatCurrency(absBalance, user?.currency || 'USD')}`
@@ -262,13 +264,13 @@ export default function FriendLedgerScreen() {
 
           {/* SETTLE UP FORM CARD */}
           {showSettleForm && (
-            <View style={[styles.formCard, { borderColor: '#FDE68A', backgroundColor: '#FFFDF5' }]}>
-              <Text style={[styles.formTitle, { color: '#D97706' }]}>Record Settle Up Payment</Text>
+            <View style={[styles.formCard, { borderColor: colors.border, backgroundColor: colors.card }]}>
+              <Text style={[styles.formTitle, { color: colors.text }]}>Record Settle Up Payment</Text>
 
               <View style={styles.inputGroup}>
-                <Text style={styles.label}>Payment Amount ({user?.currency})</Text>
+                <Text style={[styles.label, { color: colors.textSecondary }]}>Payment Amount ({user?.currency})</Text>
                 <TextInput
-                  style={styles.input}
+                  style={[styles.input, { backgroundColor: colors.inputBg, borderColor: colors.border, color: colors.text }]}
                   value={settleAmount}
                   onChangeText={setSettleAmount}
                   keyboardType="numeric"
@@ -296,23 +298,24 @@ export default function FriendLedgerScreen() {
                   size={18}
                   color={syncWithWallet ? '#059669' : '#64748B'}
                 />
-                <Text style={styles.splitCheckboxLabel}>Record transaction in my wallet</Text>
+                <Text style={[styles.splitCheckboxLabel, { color: colors.text }]}>Record transaction in my wallet</Text>
               </TouchableOpacity>
 
               {syncWithWallet && wallets.length > 0 && (
                 <View style={styles.inputGroup}>
-                  <Text style={styles.label}>Select Wallet to Sync</Text>
+                  <Text style={[styles.label, { color: colors.textSecondary }]}>Select Wallet to Sync</Text>
                   <View style={styles.splitToggleGrid}>
                     {wallets.map((w) => (
                       <TouchableOpacity
                         key={w._id}
                         style={[
                           styles.toggleBtn,
+                          { backgroundColor: colors.inputBg, borderColor: colors.border },
                           settleWalletId === w._id && styles.toggleBtnActive,
                         ]}
                         onPress={() => setSettleWalletId(w._id)}
                       >
-                        <Text style={[styles.toggleBtnText, settleWalletId === w._id && styles.toggleBtnTextActive]}>
+                        <Text style={[styles.toggleBtnText, { color: colors.textSecondary }, settleWalletId === w._id && styles.toggleBtnTextActive]}>
                           {w.name}
                         </Text>
                       </TouchableOpacity>
@@ -341,13 +344,13 @@ export default function FriendLedgerScreen() {
           )}
 
           {/* ADD SPLIT EXPENSE CARD */}
-          <View style={styles.formCard}>
-            <Text style={styles.formTitle}>Add Shared Expense</Text>
+          <View style={[styles.formCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <Text style={[styles.formTitle, { color: colors.text }]}>Add Shared Expense</Text>
 
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>Description</Text>
+              <Text style={[styles.label, { color: colors.textSecondary }]}>Description</Text>
               <TextInput
-                style={styles.input}
+                style={[styles.input, { backgroundColor: colors.inputBg, borderColor: colors.border, color: colors.text }]}
                 value={description}
                 onChangeText={setDescription}
                 placeholder="e.g. Dinner split, Uber ride"
@@ -357,9 +360,9 @@ export default function FriendLedgerScreen() {
 
             <View style={styles.row}>
               <View style={[styles.inputGroup, { flex: 1 }]}>
-                <Text style={styles.label}>Total Amount Paid</Text>
+                <Text style={[styles.label, { color: colors.textSecondary }]}>Total Amount Paid</Text>
                 <TextInput
-                  style={styles.input}
+                  style={[styles.input, { backgroundColor: colors.inputBg, borderColor: colors.border, color: colors.text }]}
                   value={amount}
                   onChangeText={setAmount}
                   placeholder="0.00"
@@ -369,38 +372,38 @@ export default function FriendLedgerScreen() {
               </View>
 
               <View style={[styles.inputGroup, { flex: 1.2 }]}>
-                <Text style={styles.label}>Who Paid?</Text>
+                <Text style={[styles.label, { color: colors.textSecondary }]}>Who Paid?</Text>
                 <View style={styles.splitToggleGrid}>
                   <TouchableOpacity
-                    style={[styles.toggleBtn, paidByMe && styles.toggleBtnActive]}
+                    style={[styles.toggleBtn, { backgroundColor: colors.inputBg, borderColor: colors.border }, paidByMe && styles.toggleBtnActive]}
                     onPress={() => setPaidByMe(true)}
                   >
-                    <Text style={[styles.toggleBtnText, paidByMe && styles.toggleBtnTextActive]}>You</Text>
+                    <Text style={[styles.toggleBtnText, { color: colors.textSecondary }, paidByMe && styles.toggleBtnTextActive]}>You</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
-                    style={[styles.toggleBtn, !paidByMe && styles.toggleBtnActive]}
+                    style={[styles.toggleBtn, { backgroundColor: colors.inputBg, borderColor: colors.border }, !paidByMe && styles.toggleBtnActive]}
                     onPress={() => setPaidByMe(false)}
                   >
-                    <Text style={[styles.toggleBtnText, !paidByMe && styles.toggleBtnTextActive]}>{friendName}</Text>
+                    <Text style={[styles.toggleBtnText, { color: colors.textSecondary }, !paidByMe && styles.toggleBtnTextActive]}>{friendName}</Text>
                   </TouchableOpacity>
                 </View>
               </View>
             </View>
 
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>Split Type</Text>
+              <Text style={[styles.label, { color: colors.textSecondary }]}>Split Type</Text>
               <View style={styles.splitToggleGrid}>
                 <TouchableOpacity
-                  style={[styles.toggleBtn, split50 && styles.toggleBtnActive]}
+                  style={[styles.toggleBtn, { backgroundColor: colors.inputBg, borderColor: colors.border }, split50 && styles.toggleBtnActive]}
                   onPress={() => setSplit50(true)}
                 >
-                  <Text style={[styles.toggleBtnText, split50 && styles.toggleBtnTextActive]}>Split 50/50 (half owed)</Text>
+                  <Text style={[styles.toggleBtnText, { color: colors.textSecondary }, split50 && styles.toggleBtnTextActive]}>Split 50/50 (half owed)</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                  style={[styles.toggleBtn, !split50 && styles.toggleBtnActive]}
+                  style={[styles.toggleBtn, { backgroundColor: colors.inputBg, borderColor: colors.border }, !split50 && styles.toggleBtnActive]}
                   onPress={() => setSplit50(false)}
                 >
-                  <Text style={[styles.toggleBtnText, !split50 && styles.toggleBtnTextActive]}>Full Amount (100% owed)</Text>
+                  <Text style={[styles.toggleBtnText, { color: colors.textSecondary }, !split50 && styles.toggleBtnTextActive]}>Full Amount (100% owed)</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -419,11 +422,11 @@ export default function FriendLedgerScreen() {
           </View>
 
           {/* LEDGER TRANSACTION LIST */}
-          <Text style={styles.sectionHeader}>Ledger History</Text>
+          <Text style={[styles.sectionHeader, { color: colors.text }]}>Ledger History</Text>
           {transactions.length === 0 ? (
-            <View style={styles.emptyContainer}>
-              <FontAwesome name="list-alt" size={40} color="#94A3B8" />
-              <Text style={styles.emptyText}>No transaction history with {friendName}.</Text>
+            <View style={[styles.emptyContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
+              <FontAwesome name="list-alt" size={40} color={colors.textSecondary} />
+              <Text style={[styles.emptyText, { color: colors.textSecondary }]}>No transaction history with {friendName}.</Text>
             </View>
           ) : (
             transactions.map((t) => {
@@ -431,12 +434,12 @@ export default function FriendLedgerScreen() {
               const isSettled = t.settled;
 
               return (
-                <View key={t._id} style={[styles.ledgerRow, isSettled && styles.settledRow]}>
+                <View key={t._id} style={[styles.ledgerRow, { backgroundColor: colors.card, borderColor: colors.border }, isSettled && styles.settledRow]}>
                   <View style={styles.ledgerInfo}>
-                    <Text style={[styles.ledgerDesc, isSettled && styles.settledText]}>
+                    <Text style={[styles.ledgerDesc, { color: colors.text }, isSettled && styles.settledText]}>
                       {t.description}
                     </Text>
-                    <Text style={styles.ledgerMeta}>
+                    <Text style={[styles.ledgerMeta, { color: colors.textSecondary }]}>
                       {paidByMe ? 'You paid' : `${t.paidBy.name} paid`} • {new Date(t.createdAt).toLocaleDateString()}
                     </Text>
                   </View>

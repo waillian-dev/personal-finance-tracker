@@ -6,6 +6,8 @@ import { ActivityIndicator, View, StyleSheet } from 'react-native';
 import 'react-native-reanimated';
 import { useRouter, useSegments } from 'expo-router';
 import { useAuthStore } from '../store/authStore';
+import { useThemeColors } from '../hooks/useThemeColors';
+import { StatusBar } from 'expo-status-bar';
 
 export {
   ErrorBoundary,
@@ -78,27 +80,32 @@ function RootLayoutNav() {
     }
   }, [token, segments, isLoading, hasSeenOnboarding]);
 
+  const { colors, isDark } = useThemeColors();
+
   if (isLoading) {
     return (
-      <View style={styles.loadingContainer}>
+      <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
         <ActivityIndicator size="large" color="#10B981" />
       </View>
     );
   }
 
   return (
-    <Stack screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="onboarding" options={{ gestureEnabled: false }} />
-      <Stack.Screen name="login" options={{ gestureEnabled: false }} />
-      <Stack.Screen name="register" options={{ gestureEnabled: false }} />
-      <Stack.Screen name="(tabs)" />
-      <Stack.Screen name="notifications" options={{ headerShown: false }} />
-      <Stack.Screen name="settings" options={{ headerShown: false }} />
-      <Stack.Screen name="transactions" options={{ headerShown: false }} />
-      <Stack.Screen name="categories" options={{ headerShown: false }} />
-      <Stack.Screen name="friend-ledger" options={{ headerShown: false }} />
-      <Stack.Screen name="modal" options={{ presentation: 'modal', headerShown: true, title: 'Add Transaction' }} />
-    </Stack>
+    <View style={{ flex: 1, backgroundColor: colors.background }}>
+      <StatusBar style={isDark ? 'light' : 'dark'} />
+      <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.background } }}>
+        <Stack.Screen name="onboarding" options={{ gestureEnabled: false }} />
+        <Stack.Screen name="login" options={{ gestureEnabled: false }} />
+        <Stack.Screen name="register" options={{ gestureEnabled: false }} />
+        <Stack.Screen name="(tabs)" />
+        <Stack.Screen name="notifications" options={{ headerShown: false }} />
+        <Stack.Screen name="settings" options={{ headerShown: false }} />
+        <Stack.Screen name="transactions" options={{ headerShown: false }} />
+        <Stack.Screen name="categories" options={{ headerShown: false }} />
+        <Stack.Screen name="friend-ledger" options={{ headerShown: false }} />
+        <Stack.Screen name="modal" options={{ presentation: 'modal', headerShown: true, title: 'Add Transaction' }} />
+      </Stack>
+    </View>
   );
 }
 

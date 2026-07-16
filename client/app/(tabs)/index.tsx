@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   StyleSheet,
   Text,
@@ -9,15 +9,18 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   SafeAreaView,
+  Animated,
 } from 'react-native';
 import { FontAwesome } from '@expo/vector-icons';
-import { Link, useRouter } from 'expo-router';
+import { useRouter } from 'expo-router';
 import api from '../../services/api';
 import { Wallet, Transaction } from '../../types';
 import { useAuthStore } from '../../store/authStore';
 import { formatCurrency } from '../../utils/currency';
+import { useThemeColors } from '../../hooks/useThemeColors';
 
 export default function DashboardScreen() {
+  const { colors, isDark } = useThemeColors();
   const [wallets, setWallets] = useState<Wallet[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [monthTransactions, setMonthTransactions] = useState<Transaction[]>([]);
@@ -25,8 +28,76 @@ export default function DashboardScreen() {
   const [totalPayables, setTotalPayables] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const { user } = useAuthStore();
+  const { user, updateProfile } = useAuthStore();
   const router = useRouter();
+
+  // Animation values
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(20)).current;
+  const salaryBarWidth = useRef(new Animated.Value(0)).current;
+
+  const salaryProgressWidth = salaryBarWidth.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0%', '100%']
+  });
+
+  // Action Button Spring Scales
+  const actionScaleAdd = useRef(new Animated.Value(1)).current;
+  const actionScaleWallets = useRef(new Animated.Value(1)).current;
+  const actionScaleCats = useRef(new Animated.Value(1)).current;
+  const actionScaleFriends = useRef(new Animated.Value(1)).current;
+
+  const animatePress = (scaleValue: Animated.Value) => {
+    Animated.sequence([
+      Animated.timing(scaleValue, {
+        toValue: 0.93,
+        duration: 80,
+        useNativeDriver: true,
+      }),
+      Animated.spring(scaleValue, {
+        toValue: 1,
+        friction: 3,
+        tension: 40,
+        useNativeDriver: true,
+      })
+    ]).start();
+  };
+
+  useEffect(() => {
+    if (!isLoading) {
+      Animated.parallel([
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 600,
+          useNativeDriver: true,
+        }),
+        Animated.timing(slideAnim, {
+          toValue: 0,
+          duration: 600,
+          useNativeDriver: true,
+        })
+      ]).start();
+
+      Animated.timing(salaryBarWidth, {
+        toValue: 1,
+        duration: 1000,
+        useNativeDriver: false,
+      }).start();
+    } else {
+      fadeAnim.setValue(0);
+      slideAnim.setValue(20);
+      salaryBarWidth.setValue(0);
+    }
+  }, [isLoading]);
+
+  const toggleTheme = async () => {
+    const nextTheme = isDark ? 'light' : 'dark';
+    try {
+      await updateProfile({ theme: nextTheme });
+    } catch (err) {
+      console.error('Failed to toggle theme:', err);
+    }
+  };
 
   const fetchData = async () => {
     try {
@@ -121,30 +192,30 @@ export default function DashboardScreen() {
 
   const renderTransactionItem = ({ item }: { item: Transaction }) => {
     const isIncome = item.type === 'income';
-    const isExpense = item.type === 'expense';
-    const symbol = isIncome ? '+' : isExpense ? '-' : '';
+    const isTransfer = item.type === 'transfer';
+    const symbol = isIncome ? '+' : isTransfer ? '' : '-';
 
     return (
       <TouchableOpacity
-        style={styles.transactionCard}
-        onPress={() => router.push(`/modal?editId=${item._id}`)}
+        style={[styles.transactionCard, { backgroundColor: colors.card, borderColor: colors.border }]}
+        onPress={() => router.push({ pathname: '/modal', params: { editId: item._id } })}
       >
-        <View style={styles.transactionIconContainer}>
+        <View style={[styles.transactionIconContainer, { backgroundColor: isDark ? '#334155' : '#F1F5F9' }]}>
           <Text style={styles.transactionEmoji}>
             {item.categoryId?.emoji || '📁'}
           </Text>
         </View>
         <View style={styles.transactionDetails}>
-          <Text style={styles.transactionTitle}>{item.description || item.categoryId?.name}</Text>
-          <Text style={styles.transactionMeta}>
-            {item.walletId?.name} {item.type === 'transfer' ? `→ ${item.destinationWalletId?.name}` : ''}
+          <Text style={[styles.transactionTitle, { color: colors.text }]}>{item.description || item.categoryId?.name}</Text>
+          <Text style={[styles.transactionMeta, { color: colors.textSecondary }]}>
+            {item.walletId?.name} {isTransfer ? `→ ${item.destinationWalletId?.name}` : ''}
           </Text>
         </View>
         <View style={styles.transactionRight}>
           <Text style={[styles.transactionAmount, getTransactionItemStyle(item.type)]}>
             {symbol}{formatCurrency(item.amount, user?.currency)}
           </Text>
-          <Text style={styles.transactionDate}>
+          <Text style={[styles.transactionDate, { color: colors.textSecondary }]}>
             {new Date(item.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
           </Text>
         </View>
@@ -154,14 +225,14 @@ export default function DashboardScreen() {
 
   if (isLoading) {
     return (
-      <View style={styles.loadingContainer}>
+      <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
         <ActivityIndicator size="large" color="#10B981" />
       </View>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <ScrollView
         contentContainerStyle={styles.scrollContainer}
         refreshControl={
@@ -171,58 +242,71 @@ export default function DashboardScreen() {
         {/* Welcome Section */}
         <View style={styles.welcomeRow}>
           <View style={styles.welcomeContainer}>
-            <Text style={styles.welcomeSubtitle}>Good day,</Text>
-            <Text style={styles.welcomeTitle}>{user?.name || 'User'}</Text>
+            <Text style={[styles.welcomeSubtitle, { color: colors.textSecondary }]}>Good day,</Text>
+            <Text style={[styles.welcomeTitle, { color: colors.text }]}>{user?.name || 'User'}</Text>
           </View>
-          <TouchableOpacity style={styles.bellButton} onPress={() => router.push('/notifications')}>
-            <FontAwesome name="bell-o" size={20} color="#0F172A" />
-            <View style={styles.bellBadge} />
-          </TouchableOpacity>
+          <View style={{ flexDirection: 'row', gap: 10 }}>
+            {/* Mode Switcher Button */}
+            <TouchableOpacity 
+              style={[styles.bellButton, { backgroundColor: colors.card, borderColor: colors.border }]} 
+              onPress={toggleTheme}
+            >
+              <FontAwesome name={isDark ? "sun-o" : "moon-o"} size={20} color={colors.text} />
+            </TouchableOpacity>
+
+            {/* Bell Button */}
+            <TouchableOpacity style={[styles.bellButton, { backgroundColor: colors.card, borderColor: colors.border }]} onPress={() => router.push('/notifications')}>
+              <FontAwesome name="bell-o" size={20} color={colors.text} />
+              <View style={styles.bellBadge} />
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* Net Worth Card */}
-        <View style={styles.netWorthCard}>
-          <Text style={styles.netWorthLabel}>Total Net Worth</Text>
-          <Text style={styles.netWorthValue}>{formatCurrency(netWorth, user?.currency)}</Text>
-          
-          <View style={styles.subStatsRow}>
-            <View style={styles.subStatBlock}>
-              <Text style={styles.subStatLabel}>Assets</Text>
-              <Text style={[styles.subStatValue, { color: '#10B981' }]}>
-                {formatCurrency(totalAssets, user?.currency)}
-              </Text>
+        <Animated.View style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}>
+          <View style={[styles.netWorthCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <Text style={[styles.netWorthLabel, { color: colors.textSecondary }]}>Total Net Worth</Text>
+            <Text style={[styles.netWorthValue, { color: colors.text }]}>{formatCurrency(netWorth, user?.currency)}</Text>
+            
+            <View style={[styles.subStatsRow, { borderTopColor: colors.border }]}>
+              <View style={styles.subStatBlock}>
+                <Text style={[styles.subStatLabel, { color: colors.textSecondary }]}>Assets</Text>
+                <Text style={[styles.subStatValue, { color: '#10B981' }]}>
+                  {formatCurrency(totalAssets, user?.currency)}
+                </Text>
+              </View>
+              <View style={[styles.subStatDivider, { backgroundColor: colors.border }]} />
+              <View style={styles.subStatBlock}>
+                <Text style={[styles.subStatLabel, { color: colors.textSecondary }]}>Debts</Text>
+                <Text style={[styles.subStatValue, { color: '#EF4444' }]}>
+                  {formatCurrency(totalDebts, user?.currency)}
+                </Text>
+              </View>
             </View>
-            <View style={styles.subStatDivider} />
-            <View style={styles.subStatBlock}>
-              <Text style={styles.subStatLabel}>Debts</Text>
-              <Text style={[styles.subStatValue, { color: '#EF4444' }]}>
-                {formatCurrency(totalDebts, user?.currency)}
-              </Text>
-            </View>
-          </View>
 
-          {/* Friends Split Receivables / Payables */}
-          <View style={[styles.subStatsRow, { marginTop: 12, borderTopWidth: 1, borderTopColor: '#F1F5F9', paddingTop: 12 }]}>
-            <View style={styles.subStatBlock}>
-              <Text style={styles.subStatLabel}>Receivable (Friends)</Text>
-              <Text style={[styles.subStatValue, { color: '#059669', fontSize: 13 }]}>
-                {formatCurrency(totalReceivables, user?.currency)}
-              </Text>
-            </View>
-            <View style={styles.subStatDivider} />
-            <View style={styles.subStatBlock}>
-              <Text style={styles.subStatLabel}>Payable (Friends)</Text>
-              <Text style={[styles.subStatValue, { color: '#DC2626', fontSize: 13 }]}>
-                {formatCurrency(totalPayables, user?.currency)}
-              </Text>
+            {/* Friends Split Receivables / Payables */}
+            <View style={[styles.subStatsRow, { marginTop: 12, borderTopWidth: 1, borderTopColor: colors.border, paddingTop: 12 }]}>
+              <View style={styles.subStatBlock}>
+                <Text style={[styles.subStatLabel, { color: colors.textSecondary }]}>Receivable (Friends)</Text>
+                <Text style={[styles.subStatValue, { color: '#059669', fontSize: 13 }]}>
+                  {formatCurrency(totalReceivables, user?.currency)}
+                </Text>
+              </View>
+              <View style={[styles.subStatDivider, { backgroundColor: colors.border }]} />
+              <View style={styles.subStatBlock}>
+                <Text style={[styles.subStatLabel, { color: colors.textSecondary }]}>Payable (Friends)</Text>
+                <Text style={[styles.subStatValue, { color: '#DC2626', fontSize: 13 }]}>
+                  {formatCurrency(totalPayables, user?.currency)}
+                </Text>
+              </View>
             </View>
           </View>
-        </View>
+        </Animated.View>
 
         {/* My Cards (Wallets rendered as horizontal cards) */}
         {wallets.length > 0 ? (
           <View style={{ marginBottom: 24 }}>
-            <Text style={styles.sectionHeader}>My Cards</Text>
+            <Text style={[styles.sectionHeader, { color: colors.text }]}>My Cards</Text>
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
@@ -283,17 +367,17 @@ export default function DashboardScreen() {
         {/* Monthly Wallet Performance Section (Wallet, Income | Expense - default this month) */}
         {wallets.length > 0 ? (
           <View style={styles.walletSectionContainer}>
-            <Text style={styles.sectionHeader}>Monthly Wallet Performance</Text>
+            <Text style={[styles.sectionHeader, { color: colors.text }]}>Monthly Wallet Performance</Text>
             {wallets.map((wallet) => {
               const stats = getWalletMonthlyStats(wallet._id);
               return (
-                <View key={wallet._id} style={styles.walletPerformanceCard}>
+                <View key={wallet._id} style={[styles.walletPerformanceCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
                   <View style={styles.walletPerfLeft}>
                     <View style={styles.walletTitleRow}>
                       <View style={[styles.colorDot, { backgroundColor: wallet.color }]} />
-                      <Text style={styles.walletPerfName}>{wallet.name}</Text>
+                      <Text style={[styles.walletPerfName, { color: colors.text }]}>{wallet.name}</Text>
                     </View>
-                    <Text style={styles.walletPerfBalance}>
+                    <Text style={[styles.walletPerfBalance, { color: colors.textSecondary }]}>
                       {formatCurrency(wallet.balance, wallet.currency)}
                     </Text>
                   </View>
@@ -317,68 +401,99 @@ export default function DashboardScreen() {
 
         {/* Financial Summary & Monthly Salary Bar */}
         {user?.monthlySalary ? (
-          <View style={styles.salaryCard}>
+          <View style={[styles.salaryCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
             <View style={styles.salaryHeader}>
-              <Text style={styles.salaryTitle}>Monthly Salary Baseline</Text>
-              <Text style={styles.salaryAmount}>
+              <Text style={[styles.salaryTitle, { color: colors.textSecondary }]}>Monthly Salary Baseline</Text>
+              <Text style={[styles.salaryAmount, { color: colors.text }]}>
                 {formatCurrency(user.monthlySalary, user.currency)}
               </Text>
             </View>
-            <View style={styles.salaryProgressContainer}>
-              <View style={styles.salaryProgressBar} />
+            <View style={[styles.salaryProgressContainer, { backgroundColor: colors.inputBg }]}>
+              <Animated.View style={[styles.salaryProgressBar, { width: salaryProgressWidth }]} />
             </View>
             <Text style={styles.salaryFooter}>Set in Profile Settings</Text>
           </View>
         ) : null}
 
         {/* Quick Actions */}
-        <Text style={styles.sectionHeader}>Quick Actions</Text>
+        <Text style={[styles.sectionHeader, { color: colors.text }]}>Quick Actions</Text>
         <View style={styles.actionsGrid}>
-          <Link href="/modal" asChild>
-            <TouchableOpacity style={styles.actionButton}>
+          <Animated.View style={{ flex: 1, transform: [{ scale: actionScaleAdd }] }}>
+            <TouchableOpacity
+              style={[styles.actionButton, { backgroundColor: colors.card, borderColor: colors.border, marginHorizontal: 4 }]}
+              onPress={() => {
+                animatePress(actionScaleAdd);
+                router.push('/modal');
+              }}
+            >
               <View style={[styles.actionIconWrapper, { backgroundColor: 'rgba(16, 185, 129, 0.15)' }]}>
                 <FontAwesome name="plus" size={16} color="#10B981" />
               </View>
-              <Text style={styles.actionText}>Add Tx</Text>
+              <Text style={[styles.actionText, { color: colors.text }]}>Add Tx</Text>
             </TouchableOpacity>
-          </Link>
-          <TouchableOpacity style={styles.actionButton} onPress={() => router.push('/two')}>
-            <View style={[styles.actionIconWrapper, { backgroundColor: 'rgba(59, 130, 246, 0.15)' }]}>
-              <FontAwesome name="credit-card" size={16} color="#3B82F6" />
-            </View>
-            <Text style={styles.actionText}>Wallets</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.actionButton} onPress={() => router.push('/categories')}>
-            <View style={[styles.actionIconWrapper, { backgroundColor: 'rgba(139, 92, 246, 0.15)' }]}>
-              <FontAwesome name="tags" size={16} color="#8B5CF6" />
-            </View>
-            <Text style={styles.actionText}>Categories</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.actionButton} onPress={() => router.push('/friends')}>
-            <View style={[styles.actionIconWrapper, { backgroundColor: 'rgba(245, 158, 11, 0.15)' }]}>
-              <FontAwesome name="users" size={16} color="#F59E0B" />
-            </View>
-            <Text style={styles.actionText}>Friends</Text>
-          </TouchableOpacity>
+          </Animated.View>
+
+          <Animated.View style={{ flex: 1, transform: [{ scale: actionScaleWallets }] }}>
+            <TouchableOpacity
+              style={[styles.actionButton, { backgroundColor: colors.card, borderColor: colors.border, marginHorizontal: 4 }]}
+              onPress={() => {
+                animatePress(actionScaleWallets);
+                router.push('/two');
+              }}
+            >
+              <View style={[styles.actionIconWrapper, { backgroundColor: 'rgba(59, 130, 246, 0.15)' }]}>
+                <FontAwesome name="credit-card" size={16} color="#3B82F6" />
+              </View>
+              <Text style={[styles.actionText, { color: colors.text }]}>Wallets</Text>
+            </TouchableOpacity>
+          </Animated.View>
+
+          <Animated.View style={{ flex: 1, transform: [{ scale: actionScaleCats }] }}>
+            <TouchableOpacity
+              style={[styles.actionButton, { backgroundColor: colors.card, borderColor: colors.border, marginHorizontal: 4 }]}
+              onPress={() => {
+                animatePress(actionScaleCats);
+                router.push('/categories');
+              }}
+            >
+              <View style={[styles.actionIconWrapper, { backgroundColor: 'rgba(139, 92, 246, 0.15)' }]}>
+                <FontAwesome name="tags" size={16} color="#8B5CF6" />
+              </View>
+              <Text style={[styles.actionText, { color: colors.text }]}>Categories</Text>
+            </TouchableOpacity>
+          </Animated.View>
+
+          <Animated.View style={{ flex: 1, transform: [{ scale: actionScaleFriends }] }}>
+            <TouchableOpacity
+              style={[styles.actionButton, { backgroundColor: colors.card, borderColor: colors.border, marginHorizontal: 4 }]}
+              onPress={() => {
+                animatePress(actionScaleFriends);
+                router.push('/(tabs)/friends');
+              }}
+            >
+              <View style={[styles.actionIconWrapper, { backgroundColor: 'rgba(245, 158, 11, 0.15)' }]}>
+                <FontAwesome name="users" size={16} color="#F59E0B" />
+              </View>
+              <Text style={[styles.actionText, { color: colors.text }]}>Friends</Text>
+            </TouchableOpacity>
+          </Animated.View>
         </View>
 
         {/* Recent Transactions Header */}
         <View style={[styles.recentHeaderContainer, { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }]}>
-          <Text style={styles.sectionHeader}>Recent Activity</Text>
+          <Text style={[styles.sectionHeader, { color: colors.text }]}>Recent Activity</Text>
           <TouchableOpacity onPress={() => router.push('/transactions')}>
             <Text style={{ fontFamily: 'System', fontSize: 13, fontWeight: 'bold', color: '#059669' }}>See All</Text>
           </TouchableOpacity>
         </View>
 
         {transactions.length === 0 ? (
-          <View style={styles.emptyContainer}>
-            <FontAwesome name="folder-open-o" size={48} color="#475569" />
-            <Text style={styles.emptyText}>No transactions recorded yet.</Text>
-            <Link href="/modal" asChild>
-              <TouchableOpacity style={styles.emptyAddButton}>
-                <Text style={styles.emptyAddButtonText}>Add First Transaction</Text>
-              </TouchableOpacity>
-            </Link>
+          <View style={[styles.emptyContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <FontAwesome name="folder-open-o" size={48} color={colors.textSecondary} />
+            <Text style={[styles.emptyText, { color: colors.textSecondary }]}>No transactions recorded yet.</Text>
+            <TouchableOpacity style={styles.emptyAddButton} onPress={() => router.push('/modal')}>
+              <Text style={styles.emptyAddButtonText}>Add First Transaction</Text>
+            </TouchableOpacity>
           </View>
         ) : (
           <FlatList
