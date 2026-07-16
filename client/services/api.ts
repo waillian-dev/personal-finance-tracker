@@ -1,9 +1,24 @@
 import axios from 'axios';
 import Constants from 'expo-constants';
+import { Platform } from 'react-native';
 import { getItem, setItem, deleteItem } from '../utils/storage';
 
-// Get LAN IP for Expo Go, fallback to localhost for simulator
+// Get target URL depending on platform and simulator status
 const getBaseUrl = () => {
+  if (Platform.OS === 'web') {
+    return 'http://localhost:5001/api';
+  }
+  
+  // Constants.isDevice is deprecated in Constants but still present as a fallback
+  const isDevice = Constants.isDevice;
+  if (!isDevice) {
+    if (Platform.OS === 'ios') {
+      return 'http://127.0.0.1:5001/api';
+    } else if (Platform.OS === 'android') {
+      return 'http://10.0.2.2:5001/api';
+    }
+  }
+
   const hostUri = Constants.expoConfig?.hostUri;
   if (hostUri) {
     const ip = hostUri.split(':')[0];
