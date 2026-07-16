@@ -25,6 +25,7 @@ const predictionsRoutes = require('./routes/predictionsRoutes');
 const recurringRoutes = require('./routes/recurringRoutes');
 const friendRoutes = require('./routes/friendRoutes');
 const ledgerRoutes = require('./routes/ledgerRoutes');
+const savingGoalRoutes = require('./routes/savingGoalRoutes');
 
 // Mount Routers
 app.use('/api/auth', authRoutes);
@@ -36,6 +37,7 @@ app.use('/api/predictions', predictionsRoutes);
 app.use('/api/recurring', recurringRoutes);
 app.use('/api/friends', friendRoutes);
 app.use('/api/ledger', ledgerRoutes);
+app.use('/api/saving-goals', savingGoalRoutes);
 
 // Health check endpoint
 app.get('/api/status', (req, res) => {

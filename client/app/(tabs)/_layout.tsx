@@ -89,6 +89,8 @@ function FloatingTabBar({ state, descriptors, navigation }: any) {
             ? 'dashboard'
             : route.name === 'two'
             ? 'credit-card'
+            : route.name === 'goals'
+            ? 'bullseye'
             : route.name === 'friends'
             ? 'users'
             : 'user';
@@ -126,6 +128,12 @@ export default function TabLayout() {
         name="two"
         options={{
           title: 'Wallets',
+        }}
+      />
+      <Tabs.Screen
+        name="goals"
+        options={{
+          title: 'Goals',
         }}
       />
       <Tabs.Screen
