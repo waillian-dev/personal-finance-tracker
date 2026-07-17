@@ -2,6 +2,7 @@ const express = require('express');
 const {
   getSavingGoals,
   createSavingGoal,
+  getSavingGoal,
   updateSavingGoal,
   deleteSavingGoal,
   addSavings,
@@ -18,6 +19,7 @@ router.route('/')
   .post(createSavingGoal);
 
 router.route('/:id')
+  .get(getSavingGoal)
   .put(updateSavingGoal)
   .delete(deleteSavingGoal);
 

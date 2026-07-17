@@ -299,9 +299,31 @@ const withdrawSavings = async (req, res) => {
   }
 };
 
+// @desc    Get saving goal by ID
+// @route   GET /api/saving-goals/:id
+// @access  Private
+const getSavingGoal = async (req, res) => {
+  try {
+    const goal = await SavingGoal.findById(req.params.id);
+    if (!goal) {
+      return res.status(404).json({ success: false, error: 'Saving goal not found' });
+    }
+    if (goal.userId.toString() !== req.user.id) {
+      return res.status(401).json({ success: false, error: 'Not authorized' });
+    }
+    res.json({
+      success: true,
+      data: goal,
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+};
+
 module.exports = {
   getSavingGoals,
   createSavingGoal,
+  getSavingGoal,
   updateSavingGoal,
   deleteSavingGoal,
   addSavings,
