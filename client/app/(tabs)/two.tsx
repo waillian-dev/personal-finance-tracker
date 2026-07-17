@@ -24,6 +24,7 @@ import { useRouter } from 'expo-router';
 import Svg, { Circle } from 'react-native-svg';
 
 // Solar Icons imports
+import * as SolarBold from '@solar-icons/react-native/Bold';
 import {
   Dollar,
   Home2,
@@ -363,8 +364,14 @@ export default function WalletsScreen() {
     setIsAdding(false);
   };
 
-  const getCategoryIcon = (categoryName: string) => {
-    const name = categoryName.toLowerCase();
+  const getCategoryIcon = (category: any) => {
+    if (category?.emoji) {
+      const IconComponent = (SolarBold as any)[category.emoji];
+      if (IconComponent) {
+        return <IconComponent size={18} color={category.color || '#8B5CF6'} />;
+      }
+    }
+    const name = (category?.name || '').toLowerCase();
     if (name.includes('salary') || name.includes('income') || name.includes('paycheck') || name.includes('freelance')) {
       return <Dollar size={18} color="#10B981" />;
     }
@@ -583,7 +590,7 @@ export default function WalletsScreen() {
                   onPress={() => router.push(`/modal?editId=${t._id}`)}
                 >
                   <View style={[styles.iconWrapper, { backgroundColor: isDark ? '#334155' : '#F1F5F9', borderColor: colors.border }]}>
-                    {getCategoryIcon(t.categoryId?.name || '')}
+                    {getCategoryIcon(t.categoryId)}
                   </View>
                   <View style={styles.detailsContainer}>
                     <Text style={[styles.txDescription, { color: colors.text }]}>{t.description || t.categoryId?.name}</Text>

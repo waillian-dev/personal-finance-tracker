@@ -19,6 +19,7 @@ import { Transaction, Wallet, Category } from '../types';
 import { useThemeColors } from '../hooks/useThemeColors';
 
 // Solar Icons imports from Bold style
+import * as SolarBold from '@solar-icons/react-native/Bold';
 import {
   AltArrowLeft,
   Magnifier,
@@ -104,18 +105,24 @@ export default function TransactionsScreen() {
     );
   });
 
-  const getCategoryIcon = (categoryName: string) => {
-    const name = categoryName.toLowerCase();
+  const getCategoryIcon = (category: any) => {
+    if (category?.emoji) {
+      const IconComponent = (SolarBold as any)[category.emoji];
+      if (IconComponent) {
+        return <IconComponent size={18} color={category.color || '#8B5CF6'} />;
+      }
+    }
+    const name = (category?.name || '').toLowerCase();
     if (name.includes('salary') || name.includes('income') || name.includes('paycheck') || name.includes('freelance')) {
-      return <Dollar size={18} color="#10B981" />;
+      return <SolarBold.Dollar size={18} color="#10B981" />;
     }
     if (name.includes('rent') || name.includes('home') || name.includes('house') || name.includes('utility') || name.includes('bill')) {
-      return <Home2 size={18} color="#3B82F6" />;
+      return <SolarBold.Home2 size={18} color="#3B82F6" />;
     }
     if (name.includes('shop') || name.includes('grocery') || name.includes('food') || name.includes('dining')) {
-      return <Bag size={18} color="#EC4899" />;
+      return <SolarBold.Bag size={18} color="#EC4899" />;
     }
-    return <Widget size={18} color="#8B5CF6" />;
+    return <SolarBold.Widget size={18} color="#8B5CF6" />;
   };
 
   // Group transactions by date
@@ -317,7 +324,7 @@ export default function TransactionsScreen() {
                     onPress={() => router.push(`/modal?editId=${t._id}`)}
                   >
                     <View style={[styles.iconWrapper, { backgroundColor: isDark ? '#334155' : '#F1F5F9', borderColor: colors.border }]}>
-                      {getCategoryIcon(t.categoryId?.name || '')}
+                      {getCategoryIcon(t.categoryId)}
                     </View>
                     <View style={styles.detailsContainer}>
                       <Text style={[styles.txDescription, { color: colors.text }]}>{t.description || t.categoryId?.name}</Text>

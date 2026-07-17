@@ -18,6 +18,7 @@ import { Wallet, Transaction } from '../../types';
 import { useAuthStore } from '../../store/authStore';
 import { formatCurrency } from '../../utils/currency';
 import { useThemeColors } from '../../hooks/useThemeColors';
+import * as SolarBold from '@solar-icons/react-native/Bold';
 
 // Solar Icons imports from Bold style
 import {
@@ -194,8 +195,14 @@ export default function DashboardScreen() {
     .filter(w => w.type === 'credit_card')
     .reduce((sum, w) => sum + Math.abs(Math.min(0, Number(w.balance))), 0);
 
-  const getCategoryIcon = (categoryName: string) => {
-    const name = categoryName.toLowerCase();
+  const getCategoryIcon = (category: any) => {
+    if (category?.emoji) {
+      const IconComponent = (SolarBold as any)[category.emoji];
+      if (IconComponent) {
+        return <IconComponent size={18} color={category.color || '#8B5CF6'} />;
+      }
+    }
+    const name = (category?.name || '').toLowerCase();
     if (name.includes('salary') || name.includes('income') || name.includes('paycheck') || name.includes('freelance')) {
       return <Dollar size={18} color="#10B981" />;
     }
@@ -221,7 +228,7 @@ export default function DashboardScreen() {
         onPress={() => router.push({ pathname: '/modal', params: { editId: item._id } })}
       >
         <View style={[styles.transactionIconContainer, { backgroundColor: isDark ? '#334155' : '#F1F5F9' }]}>
-          {getCategoryIcon(item.categoryId?.name || '')}
+          {getCategoryIcon(item.categoryId)}
         </View>
         <View style={styles.transactionDetails}>
           <Text style={[styles.transactionTitle, { color: colors.text }]}>{item.description || item.categoryId?.name}</Text>

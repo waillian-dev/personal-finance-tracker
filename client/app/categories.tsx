@@ -19,15 +19,28 @@ import { Category } from '../types';
 import CustomAlert from '../components/CustomAlert';
 import { useThemeColors } from '../hooks/useThemeColors';
 
-// Solar Icons imports
-import {
-  AltArrowLeft,
-  AddCircle,
-} from '@solar-icons/react-native/Bold';
+// Import all Bold Solar Icons
+import * as SolarBold from '@solar-icons/react-native/Bold';
+import { AltArrowLeft, AddCircle } from '@solar-icons/react-native/Bold';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 const COLORS = ['#10B981', '#3B82F6', '#8B5CF6', '#F59E0B', '#EF4444', '#EC4899', '#14B8A6', '#6366F1'];
-const EMOJIS = ['📁', '🍔', '🛒', '🚗', '🎬', '🏠', '👕', '🏥', '🎓', '💼', '💰', '🎁', '✈️', '🔧', '🍕', '💡'];
+
+// Available Solar Icons names for categories selection
+const SOLAR_ICONS = [
+  'Dollar',
+  'Home2',
+  'Bag',
+  'Widget',
+  'AddCircle',
+  'Folder',
+  'Wallet',
+  'Settings',
+  'Star',
+  'Heart',
+  'Notes',
+  'Bill',
+];
 
 export default function CategoriesScreen() {
   const { colors, isDark } = useThemeColors();
@@ -41,7 +54,7 @@ export default function CategoriesScreen() {
   const [name, setName] = useState('');
   const [type, setType] = useState<'income' | 'expense'>('expense');
   const [selectedColor, setSelectedColor] = useState(COLORS[0]);
-  const [selectedEmoji, setSelectedEmoji] = useState(EMOJIS[0]);
+  const [selectedIcon, setSelectedIcon] = useState(SOLAR_ICONS[0]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Bottom Sheet Slide Animation
@@ -123,15 +136,16 @@ export default function CategoriesScreen() {
 
     setIsSubmitting(true);
     try {
+      const payload = {
+        name: name.trim(),
+        type,
+        color: selectedColor,
+        emoji: selectedIcon, // Save selected Solar Icon name in the emoji field for backward compatibility
+      };
+
       if (editingId) {
         // Update Custom Category
-        const response = await api.put(`/categories/${editingId}`, {
-          name: name.trim(),
-          type,
-          color: selectedColor,
-          emoji: selectedEmoji,
-        });
-
+        const response = await api.put(`/categories/${editingId}`, payload);
         if (response.data.success) {
           closeBottomSheet();
           fetchCategories();
@@ -139,13 +153,7 @@ export default function CategoriesScreen() {
         }
       } else {
         // Create Custom Category
-        const response = await api.post('/categories', {
-          name: name.trim(),
-          type,
-          color: selectedColor,
-          emoji: selectedEmoji,
-        });
-
+        const response = await api.post('/categories', payload);
         if (response.data.success) {
           closeBottomSheet();
           fetchCategories();
@@ -168,7 +176,7 @@ export default function CategoriesScreen() {
     setName(cat.name);
     setType(cat.type);
     setSelectedColor(cat.color || COLORS[0]);
-    setSelectedEmoji(cat.emoji || EMOJIS[0]);
+    setSelectedIcon(cat.emoji || SOLAR_ICONS[0]);
     openBottomSheet();
   };
 
@@ -198,9 +206,18 @@ export default function CategoriesScreen() {
     setName('');
     setType('expense');
     setSelectedColor(COLORS[0]);
-    setSelectedEmoji(EMOJIS[0]);
+    setSelectedIcon(SOLAR_ICONS[0]);
     setEditingId(null);
     setIsAdding(false);
+  };
+
+  const renderCategoryIcon = (iconName: string, iconColor: string, size = 20) => {
+    const IconComponent = (SolarBold as any)[iconName];
+    if (IconComponent) {
+      return <IconComponent size={size} color={iconColor} />;
+    }
+    // Fallback to a default Widget icon if the stored value is an old emoji or invalid
+    return <SolarBold.Widget size={size} color={iconColor} />;
   };
 
   return (
@@ -211,10 +228,7 @@ export default function CategoriesScreen() {
           <AltArrowLeft size={22} color={colors.text} />
         </TouchableOpacity>
         <Text style={[styles.headerTitle, { color: colors.text }]}>Manage Categories</Text>
-        <TouchableOpacity
-          style={styles.addButton}
-          onPress={openBottomSheet}
-        >
+        <TouchableOpacity style={styles.addButton} onPress={openBottomSheet}>
           <AddCircle size={22} color="#059669" />
         </TouchableOpacity>
       </View>
@@ -241,7 +255,7 @@ export default function CategoriesScreen() {
             <View key={cat._id} style={[styles.categoryRow, { backgroundColor: colors.card, borderColor: colors.border }]}>
               <View style={styles.catInfo}>
                 <View style={[styles.catIconWrapper, { backgroundColor: cat.color ? `${cat.color}15` : (isDark ? '#334155' : '#F1F5F9') }]}>
-                  <Text style={styles.catEmoji}>{cat.emoji || '📁'}</Text>
+                  {renderCategoryIcon(cat.emoji || 'Widget', cat.color || '#8B5CF6')}
                 </View>
                 <View>
                   <Text style={[styles.catName, { color: colors.text }]}>{cat.name}</Text>
@@ -270,7 +284,7 @@ export default function CategoriesScreen() {
             <View key={cat._id} style={[styles.categoryRow, { backgroundColor: colors.card, borderColor: colors.border }]}>
               <View style={styles.catInfo}>
                 <View style={[styles.catIconWrapper, { backgroundColor: cat.color ? `${cat.color}15` : (isDark ? '#334155' : '#F1F5F9') }]}>
-                  <Text style={styles.catEmoji}>{cat.emoji || '💰'}</Text>
+                  {renderCategoryIcon(cat.emoji || 'Widget', cat.color || '#8B5CF6')}
                 </View>
                 <View>
                   <Text style={[styles.catName, { color: colors.text }]}>{cat.name}</Text>
@@ -384,19 +398,19 @@ export default function CategoriesScreen() {
               </View>
 
               <View style={styles.inputGroup}>
-                <Text style={[styles.label, { color: colors.textSecondary }]}>Select Emoji Icon</Text>
-                <View style={styles.emojiGrid}>
-                  {EMOJIS.map((e) => (
+                <Text style={[styles.label, { color: colors.textSecondary }]}>Select Solar Icon</Text>
+                <View style={styles.iconSelectionGrid}>
+                  {SOLAR_ICONS.map((iconName) => (
                     <TouchableOpacity
-                      key={e}
+                      key={iconName}
                       style={[
-                        styles.emojiCard,
+                        styles.solarIconSelectCard,
                         { backgroundColor: colors.inputBg, borderColor: colors.border },
-                        selectedEmoji === e && styles.emojiCardActive,
+                        selectedIcon === iconName && styles.solarIconSelectCardActive,
                       ]}
-                      onPress={() => setSelectedEmoji(e)}
+                      onPress={() => setSelectedIcon(iconName)}
                     >
-                      <Text style={styles.emojiText}>{e}</Text>
+                      {renderCategoryIcon(iconName, selectedIcon === iconName ? '#059669' : colors.textSecondary, 22)}
                     </TouchableOpacity>
                   ))}
                 </View>
@@ -492,9 +506,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 4,
     elevation: 1,
-  },
-  catEmoji: {
-    fontSize: 20,
   },
   catName: {
     fontSize: 14,
@@ -604,31 +615,29 @@ const styles = StyleSheet.create({
     borderWidth: 3,
     borderColor: '#0F172A',
   },
-  emojiGrid: {
+  iconSelectionGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
+    gap: 10,
+    marginTop: 4,
   },
-  emojiCard: {
-    width: 40,
-    height: 40,
-    borderRadius: 10,
+  solarIconSelectCard: {
+    width: 46,
+    height: 46,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
   },
-  emojiCardActive: {
+  solarIconSelectCardActive: {
     borderColor: '#059669',
-    backgroundColor: 'rgba(5, 150, 105, 0.05)',
+    backgroundColor: 'rgba(5, 150, 105, 0.08)',
     borderWidth: 2,
-  },
-  emojiText: {
-    fontSize: 18,
   },
   buttonRow: {
     flexDirection: 'row',
     gap: 12,
-    marginTop: 8,
+    marginTop: 12,
   },
   cancelBtn: {
     flex: 1,
