@@ -7,6 +7,8 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   ScrollView,
+  Dimensions,
+  SafeAreaView,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { FontAwesome } from '@expo/vector-icons';
@@ -15,6 +17,17 @@ import { Wallet, Category } from '../types';
 import { useAuthStore } from '../store/authStore';
 import { formatCurrency } from '../utils/currency';
 import { useThemeColors } from '../hooks/useThemeColors';
+
+// Solar Icons
+import * as SolarBold from '@solar-icons/react-native/Bold';
+import {
+  AltArrowLeft,
+  AltArrowRight,
+  Notes,
+  Wallet as SolarWallet,
+} from '@solar-icons/react-native/Bold';
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 export default function AddTransactionModal() {
   const { colors, isDark } = useThemeColors();
@@ -33,6 +46,7 @@ export default function AddTransactionModal() {
   const [selectedCategoryId, setSelectedCategoryId] = useState('');
   const [formError, setFormError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [transactionDate, setTransactionDate] = useState(new Date());
 
   // Friend Split States
   const [isSplitWithFriend, setIsSplitWithFriend] = useState(false);
@@ -66,7 +80,6 @@ export default function AddTransactionModal() {
         if (catsRes.data.success && catsRes.data.data.length > 0) {
           loadedCategories = catsRes.data.data;
           setCategories(loadedCategories);
-          // Set first matching category default
           const initialCat = loadedCategories.find((c: Category) => c.type === 'expense');
           if (initialCat) {
             setSelectedCategoryId(initialCat._id);
@@ -92,6 +105,9 @@ export default function AddTransactionModal() {
             setDescription(tx.description || '');
             setSelectedWalletId(tx.walletId?._id || tx.walletId || '');
             setSelectedCategoryId(tx.categoryId?._id || tx.categoryId || '');
+            if (tx.date) {
+              setTransactionDate(new Date(tx.date));
+            }
             if (tx.type === 'transfer') {
               setSelectedDestWalletId(tx.destinationWalletId?._id || tx.destinationWalletId || '');
             }
@@ -107,7 +123,6 @@ export default function AddTransactionModal() {
     loadFormData();
   }, [editId]);
 
-  // Update default category selected if type changes
   useEffect(() => {
     if (!editId && categories.length > 0) {
       const match = categories.find((c) => c.type === (type === 'transfer' ? 'expense' : type));
@@ -117,7 +132,6 @@ export default function AddTransactionModal() {
     }
   }, [type, categories, editId]);
 
-  // Sync splitAmount automatically as half of main amount
   useEffect(() => {
     if (amount && !isNaN(Number(amount))) {
       const half = (parseFloat(amount) / 2).toString();
@@ -152,7 +166,6 @@ export default function AddTransactionModal() {
     setFormError('');
     setIsSubmitting(true);
 
-    // For transfers, we'll find a default category
     let categoryId = selectedCategoryId;
     if (type === 'transfer') {
       const transferCat = categories.find(c => c.name.toLowerCase().includes('transport') || c.name.toLowerCase().includes('travel') || c.type === 'expense');
@@ -170,6 +183,7 @@ export default function AddTransactionModal() {
         amount: parseFloat(amount),
         description: description || undefined,
         destinationWalletId: type === 'transfer' ? selectedDestWalletId : null,
+        date: transactionDate.toISOString(),
       };
 
       if (editId) {
@@ -179,7 +193,6 @@ export default function AddTransactionModal() {
       }
 
       if (response.data.success) {
-        // Log split ledger transaction with friend if enabled
         if (!editId && isSplitWithFriend && selectedFriendId && splitAmount && !isNaN(Number(splitAmount))) {
           try {
             const cat = categories.find((c) => c._id === categoryId);
@@ -204,139 +217,224 @@ export default function AddTransactionModal() {
     }
   };
 
+  const renderCategoryIcon = (iconName: string, iconColor: string, size = 22) => {
+    const IconComponent = (SolarBold as any)[iconName];
+    if (IconComponent) {
+      return <IconComponent size={size} color={iconColor} />;
+    }
+    return <SolarBold.Widget size={size} color={iconColor} />;
+  };
+
   if (isLoading) {
     return (
       <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
-        <ActivityIndicator size="large" color="#10B981" />
+        <ActivityIndicator size="large" color="#059669" />
       </View>
     );
   }
 
   const currencySymbol = user?.currency === 'MMK' ? 'Ks' : '$';
+  const displayCategories = categories.filter((c) => c.type === (type === 'transfer' ? 'expense' : type));
 
   return (
-    <ScrollView contentContainerStyle={[styles.container, { backgroundColor: colors.background }]} keyboardShouldPersistTaps="handled">
-      {formError ? <Text style={styles.errorText}>{formError}</Text> : null}
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
+      {/* Header */}
+      <View style={[styles.header, { borderBottomColor: colors.border }]}>
+        <TouchableOpacity onPress={() => router.back()}>
+          <Text style={styles.cancelText}>Cancel</Text>
+        </TouchableOpacity>
+        <Text style={[styles.headerTitle, { color: colors.text }]}>
+          {editId ? 'Edit Transaction' : 'New Transaction'}
+        </Text>
+        <View style={{ width: 50 }} />
+      </View>
 
-      {/* Transaction Type Buttons */}
-      <View style={styles.typeRow}>
-        {(['expense', 'income', 'transfer'] as const).map((t) => (
+      <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
+        {formError ? <Text style={styles.errorText}>{formError}</Text> : null}
+
+        {/* Expense / Income Pill Switcher */}
+        <View style={[styles.pillContainer, { backgroundColor: isDark ? '#1E293B' : '#F1F5F9' }]}>
           <TouchableOpacity
-            key={t}
-            style={[styles.typeButton, { backgroundColor: colors.inputBg }, type === t && styles.activeTypeButton]}
-            onPress={() => setType(t)}
+            style={[styles.pillButton, type === 'expense' && styles.pillButtonActive]}
+            onPress={() => setType('expense')}
           >
-            <Text style={[styles.typeButtonText, { color: colors.textSecondary }, type === t && styles.activeTypeButtonText]}>
-              {t.toUpperCase()}
+            <Text style={[styles.pillText, type === 'expense' && styles.pillTextActive]}>
+              Expense
             </Text>
           </TouchableOpacity>
-        ))}
-      </View>
 
-      {/* Amount Input */}
-      <View style={styles.amountContainer}>
-        {user?.currency !== 'MMK' ? <Text style={styles.currencySymbol}>{currencySymbol}</Text> : null}
-        <TextInput
-          style={[styles.amountInput, { color: colors.text }]}
-          placeholder="0.00"
-          placeholderTextColor="#475569"
-          keyboardType="decimal-pad"
-          value={amount}
-          onChangeText={setAmount}
-          autoFocus
-        />
-        {user?.currency === 'MMK' ? <Text style={styles.currencySymbol}> {currencySymbol}</Text> : null}
-      </View>
+          <TouchableOpacity
+            style={[styles.pillButton, type === 'income' && styles.pillButtonActive]}
+            onPress={() => setType('income')}
+          >
+            <Text style={[styles.pillText, type === 'income' && styles.pillTextActive]}>
+              Income
+            </Text>
+          </TouchableOpacity>
 
-      {/* Form Fields */}
-      <View style={styles.formSection}>
-        {/* Source Wallet Selection */}
-        <Text style={[styles.label, { color: colors.textSecondary }]}>{type === 'transfer' ? 'From Wallet' : 'Wallet'}</Text>
-        <View style={styles.pickerContainer}>
-          {wallets.map((w) => (
-            <TouchableOpacity
-              key={w._id}
-              style={[
-                styles.pickerItem,
-                { backgroundColor: colors.inputBg, borderColor: colors.border },
-                selectedWalletId === w._id && styles.pickerItemActive,
-                { borderLeftColor: w.color, borderLeftWidth: 4 }
-              ]}
-              onPress={() => setSelectedWalletId(w._id)}
-            >
-              <Text style={[styles.pickerItemText, { color: colors.text }, selectedWalletId === w._id && styles.pickerItemTextActive]}>
-                {w.name} ({formatCurrency(w.balance, w.currency)})
-              </Text>
-            </TouchableOpacity>
-          ))}
+          <TouchableOpacity
+            style={[styles.pillButton, type === 'transfer' && styles.pillButtonActive]}
+            onPress={() => setType('transfer')}
+          >
+            <Text style={[styles.pillText, type === 'transfer' && styles.pillTextActive]}>
+              Transfer
+            </Text>
+          </TouchableOpacity>
         </View>
 
-        {/* Destination Wallet Selection (Only for Transfers) */}
-        {type === 'transfer' ? (
-          <>
-            <Text style={[styles.label, { color: colors.textSecondary }]}>To Wallet</Text>
-            <View style={styles.pickerContainer}>
+        {/* Large Amount Input Area */}
+        <View style={styles.amountInputBlock}>
+          <View style={styles.amountRow}>
+            <Text style={[styles.currencyLabel, { color: isDark ? '#94A3B8' : '#1E3A8A' }]}>
+              {currencySymbol}
+            </Text>
+            <TextInput
+              style={[styles.hugeAmountInput, { color: isDark ? '#F8FAFC' : '#1E3A8A' }]}
+              value={amount}
+              onChangeText={setAmount}
+              placeholder="0"
+              placeholderTextColor={isDark ? '#475569' : '#94A3B8'}
+              keyboardType="decimal-pad"
+              autoFocus={!editId}
+            />
+          </View>
+          
+          {/* Description line with dotted bottom border */}
+          <TextInput
+            style={[styles.descDottedInput, { color: colors.text, borderBottomColor: isDark ? '#475569' : '#3B82F6' }]}
+            value={description}
+            onChangeText={setDescription}
+            placeholder="Add description..."
+            placeholderTextColor="#94A3B8"
+            textAlign="center"
+          />
+        </View>
+
+        {/* Date Row Card */}
+        <View style={[styles.dateCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <View style={styles.dateLeft}>
+            <Notes size={20} color={colors.textSecondary} />
+            <Text style={[styles.dateLabel, { color: colors.text }]}>Date</Text>
+          </View>
+          <TouchableOpacity
+            style={styles.dateRight}
+            onPress={() => {
+              // Toggle simple date picker or toggle day offsets for prototype convenience
+              const tomorrow = new Date(transactionDate);
+              tomorrow.setDate(tomorrow.getDate() + 1);
+              // if it's tomorrow, reset to today
+              if (tomorrow.getTime() > new Date().getTime() + 86400000) {
+                setTransactionDate(new Date());
+              } else {
+                setTransactionDate(tomorrow);
+              }
+            }}
+          >
+            <Text style={[styles.dateValue, { color: colors.textSecondary }]}>
+              {transactionDate.toDateString() === new Date().toDateString() ? 'Today' : transactionDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+            </Text>
+            <AltArrowRight size={18} color={colors.textSecondary} />
+          </TouchableOpacity>
+        </View>
+
+        {/* Source Wallet Selection Card */}
+        <View style={[styles.sectionContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <Text style={[styles.selectLabel, { color: colors.textSecondary }]}>
+            {type === 'transfer' ? 'FROM WALLET' : 'SELECT WALLET'}
+          </Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalScroll}>
+            {wallets.map((w) => (
+              <TouchableOpacity
+                key={w._id}
+                style={[
+                  styles.walletChip,
+                  { backgroundColor: colors.inputBg, borderColor: colors.border },
+                  selectedWalletId === w._id && [styles.walletChipActive, { borderColor: w.color || '#2563EB' }],
+                ]}
+                onPress={() => setSelectedWalletId(w._id)}
+              >
+                <View style={[styles.walletColorIndicator, { backgroundColor: w.color || '#94A3B8' }]} />
+                <Text style={[styles.walletChipText, { color: colors.text }]}>
+                  {w.name} ({formatCurrency(w.balance, w.currency)})
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
+
+        {/* Destination Wallet Card (Only for transfers) */}
+        {type === 'transfer' && (
+          <View style={[styles.sectionContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <Text style={[styles.selectLabel, { color: colors.textSecondary }]}>TO WALLET</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalScroll}>
               {wallets.map((w) => (
                 <TouchableOpacity
                   key={w._id}
                   style={[
-                    styles.pickerItem,
+                    styles.walletChip,
                     { backgroundColor: colors.inputBg, borderColor: colors.border },
-                    selectedDestWalletId === w._id && styles.pickerItemActive,
-                    { borderLeftColor: w.color, borderLeftWidth: 4 }
+                    selectedDestWalletId === w._id && [styles.walletChipActive, { borderColor: w.color || '#2563EB' }],
                   ]}
                   onPress={() => setSelectedDestWalletId(w._id)}
                 >
-                  <Text style={[styles.pickerItemText, { color: colors.text }, selectedDestWalletId === w._id && styles.pickerItemTextActive]}>
+                  <View style={[styles.walletColorIndicator, { backgroundColor: w.color || '#94A3B8' }]} />
+                  <Text style={[styles.walletChipText, { color: colors.text }]}>
                     {w.name} ({formatCurrency(w.balance, w.currency)})
                   </Text>
                 </TouchableOpacity>
               ))}
-            </View>
-          </>
-        ) : null}
+            </ScrollView>
+          </View>
+        )}
 
-        {/* Category Selection (Not shown for Transfers) */}
-        {type !== 'transfer' ? (
-          <>
-            <Text style={[styles.label, { color: colors.textSecondary }]}>Category</Text>
-            <View style={styles.categoriesGrid}>
-              {categories
-                .filter((c) => c.type === type)
-                .map((c) => (
+        {/* Category Grid Section (Not shown for transfers) */}
+        {type !== 'transfer' && (
+          <View style={styles.categorySection}>
+            <Text style={[styles.selectLabel, { color: colors.textSecondary }]}>SELECT CATEGORY</Text>
+            <View style={styles.categoryGrid}>
+              {displayCategories.map((c) => {
+                const isActive = selectedCategoryId === c._id;
+                return (
                   <TouchableOpacity
                     key={c._id}
                     style={[
-                      styles.categoryBubble,
-                      { backgroundColor: colors.inputBg },
-                      selectedCategoryId === c._id && styles.categoryBubbleActive,
-                      { borderColor: c.color }
+                      styles.categoryCard,
+                      { backgroundColor: colors.card, borderColor: colors.border },
+                      isActive && styles.categoryCardActive,
                     ]}
                     onPress={() => setSelectedCategoryId(c._id)}
                   >
-                    <Text style={styles.categoryEmoji}>{c.emoji}</Text>
-                    <Text style={[styles.categoryLabel, { color: colors.text }]}>{c.name}</Text>
+                    <View style={[styles.categoryIconWrapper, { backgroundColor: c.color ? `${c.color}15` : (isDark ? '#334155' : '#F1F5F9') }]}>
+                      {renderCategoryIcon(c.emoji || 'Widget', c.color || '#8B5CF6')}
+                    </View>
+                    <Text style={[styles.categoryCardLabel, { color: colors.text }]} numberOfLines={1}>
+                      {c.name}
+                    </Text>
                   </TouchableOpacity>
-                ))}
+                );
+              })}
+              
+              {/* More / Manage shortcut */}
+              <TouchableOpacity
+                style={[styles.categoryCard, { backgroundColor: colors.card, borderColor: colors.border }]}
+                onPress={() => router.push('/categories')}
+              >
+                <View style={[styles.categoryIconWrapper, { backgroundColor: isDark ? '#334155' : '#F1F5F9' }]}>
+                  <SolarBold.Folder size={22} color={colors.textSecondary} />
+                </View>
+                <Text style={[styles.categoryCardLabel, { color: colors.text }]}>
+                  More
+                </Text>
+              </TouchableOpacity>
             </View>
-          </>
-        ) : null}
+          </View>
+        )}
 
-        {/* Description Input */}
-        <Text style={[styles.label, { color: colors.textSecondary }]}>Description</Text>
-        <TextInput
-          style={[styles.textInput, { backgroundColor: colors.inputBg, borderColor: colors.border, color: colors.text }]}
-          placeholder="e.g. Starbucks coffee, utility bill"
-          placeholderTextColor="#94A3B8"
-          value={description}
-          onChangeText={setDescription}
-        />
-
-        {/* Split with Friend Section */}
-        {!editId && type !== 'transfer' && friends.length > 0 ? (
-          <View style={styles.splitSection}>
+        {/* Friend Split Section */}
+        {!editId && type !== 'transfer' && friends.length > 0 && (
+          <View style={[styles.splitSectionCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
             <TouchableOpacity
-              style={styles.splitCheckboxRow}
+              style={styles.splitToggleRow}
               onPress={() => setIsSplitWithFriend(!isSplitWithFriend)}
             >
               <FontAwesome
@@ -344,53 +442,53 @@ export default function AddTransactionModal() {
                 size={18}
                 color={isSplitWithFriend ? '#059669' : '#64748B'}
               />
-              <Text style={[styles.splitCheckboxLabel, { color: colors.text }]}>Relate / Split with Friend</Text>
+              <Text style={[styles.splitToggleText, { color: colors.text }]}>Relate / Split with Friend</Text>
             </TouchableOpacity>
 
-            {isSplitWithFriend ? (
-              <View style={styles.splitControls}>
-                <Text style={[styles.subLabel, { color: colors.textSecondary }]}>Select Friend</Text>
+            {isSplitWithFriend && (
+              <View style={styles.splitExpandable}>
+                <Text style={[styles.subSectionTitle, { color: colors.textSecondary }]}>Select Friend</Text>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.friendScroll}>
                   {friends.map((item) => (
                     <TouchableOpacity
                       key={item.friendshipId}
                       style={[
-                        styles.friendBubble,
+                        styles.friendChip,
                         { backgroundColor: colors.inputBg, borderColor: colors.border },
-                        selectedFriendId === item.friend._id && styles.friendBubbleActive,
+                        selectedFriendId === item.friend._id && styles.friendChipActive,
                       ]}
                       onPress={() => setSelectedFriendId(item.friend._id)}
                     >
-                      <Text style={[styles.friendBubbleText, { color: colors.textSecondary }, selectedFriendId === item.friend._id && styles.friendBubbleTextActive]}>
+                      <Text style={[styles.friendChipText, selectedFriendId === item.friend._id && styles.friendChipTextActive]}>
                         {item.friend.name}
                       </Text>
                     </TouchableOpacity>
                   ))}
                 </ScrollView>
 
-                <Text style={[styles.subLabel, { color: colors.textSecondary }]}>Split Option</Text>
+                <Text style={[styles.subSectionTitle, { color: colors.textSecondary }]}>Split Direction</Text>
                 <View style={styles.splitTypeRow}>
                   <TouchableOpacity
-                    style={[styles.splitTypeBtn, { backgroundColor: colors.inputBg, borderColor: colors.border }, splitType === 'receivable' && styles.splitTypeBtnActive]}
+                    style={[styles.splitTypeButton, { backgroundColor: colors.inputBg, borderColor: colors.border }, splitType === 'receivable' && styles.splitTypeButtonActive]}
                     onPress={() => setSplitType('receivable')}
                   >
-                    <Text style={[styles.splitTypeBtnText, { color: colors.textSecondary }, splitType === 'receivable' && styles.splitTypeBtnTextActive]}>
+                    <Text style={[styles.splitTypeButtonText, splitType === 'receivable' && styles.splitTypeButtonTextActive]}>
                       They Owe Me
                     </Text>
                   </TouchableOpacity>
                   <TouchableOpacity
-                    style={[styles.splitTypeBtn, { backgroundColor: colors.inputBg, borderColor: colors.border }, splitType === 'payable' && styles.splitTypeBtnActive]}
+                    style={[styles.splitTypeButton, { backgroundColor: colors.inputBg, borderColor: colors.border }, splitType === 'payable' && styles.splitTypeButtonActive]}
                     onPress={() => setSplitType('payable')}
                   >
-                    <Text style={[styles.splitTypeBtnText, { color: colors.textSecondary }, splitType === 'payable' && styles.splitTypeBtnTextActive]}>
+                    <Text style={[styles.splitTypeButtonText, splitType === 'payable' && styles.splitTypeButtonTextActive]}>
                       I Owe Them
                     </Text>
                   </TouchableOpacity>
                 </View>
 
-                <Text style={[styles.subLabel, { color: colors.textSecondary }]}>Owed Amount</Text>
+                <Text style={[styles.subSectionTitle, { color: colors.textSecondary }]}>Owed Amount</Text>
                 <TextInput
-                  style={[styles.textInput, { backgroundColor: colors.inputBg, borderColor: colors.border, color: colors.text }]}
+                  style={[styles.splitAmountInput, { backgroundColor: colors.inputBg, borderColor: colors.border, color: colors.text }]}
                   value={splitAmount}
                   onChangeText={setSplitAmount}
                   keyboardType="numeric"
@@ -398,38 +496,56 @@ export default function AddTransactionModal() {
                   placeholderTextColor="#94A3B8"
                 />
               </View>
-            ) : null}
+            )}
           </View>
-        ) : null}
+        )}
 
-        {/* Save Button */}
+        {/* Save Transaction Button */}
         <TouchableOpacity
-          style={styles.saveButton}
+          style={styles.saveBtn}
           onPress={handleSave}
           disabled={isSubmitting}
         >
           {isSubmitting ? (
             <ActivityIndicator color="#FFFFFF" size="small" />
           ) : (
-            <Text style={styles.saveButtonText}>Save Transaction</Text>
+            <Text style={styles.saveBtnText}>Save</Text>
           )}
         </TouchableOpacity>
-      </View>
-    </ScrollView>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    padding: 24,
-    backgroundColor: '#F8FAFC',
-    flexGrow: 1,
+  safeArea: {
+    flex: 1,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 24,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+  },
+  cancelText: {
+    color: '#3B82F6',
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: '700',
   },
   loadingContainer: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  container: {
+    padding: 24,
+    paddingBottom: 40,
   },
   errorText: {
     color: '#EF4444',
@@ -441,232 +557,265 @@ const styles = StyleSheet.create({
     padding: 12,
     borderRadius: 10,
   },
-  typeRow: {
+  pillContainer: {
     flexDirection: 'row',
-    backgroundColor: '#F1F5F9',
     borderRadius: 14,
     padding: 4,
-    marginBottom: 24,
+    alignSelf: 'center',
+    marginBottom: 30,
+    width: '100%',
   },
-  typeButton: {
+  pillButton: {
     flex: 1,
-    paddingVertical: 12,
+    paddingVertical: 10,
     alignItems: 'center',
-    borderRadius: 10,
+    borderRadius: 11,
   },
-  activeTypeButton: {
+  pillButtonActive: {
     backgroundColor: '#FFFFFF',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
+    shadowOpacity: 0.08,
     shadowRadius: 4,
-    elevation: 1,
-  },
-  typeButtonText: {
-    color: '#64748B',
-    fontWeight: 'bold',
-    fontSize: 13,
-  },
-  activeTypeButtonText: {
-    color: '#059669',
-  },
-  amountContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 28,
-  },
-  currencySymbol: {
-    fontSize: 48,
-    color: '#059669',
-    fontWeight: 'bold',
-    marginRight: 8,
-  },
-  amountInput: {
-    fontSize: 48,
-    color: '#0F172A',
-    fontWeight: 'bold',
-    width: '60%',
-    textAlign: 'left',
-  },
-  formSection: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 24,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.03,
-    shadowRadius: 12,
     elevation: 2,
   },
-  label: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#475569',
-    marginBottom: 10,
-    marginTop: 8,
-  },
-  pickerContainer: {
-    marginBottom: 16,
-    gap: 8,
-  },
-  pickerItem: {
-    backgroundColor: '#F8FAFC',
-    padding: 12,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-  },
-  pickerItemActive: {
-    borderColor: '#059669',
-    backgroundColor: 'rgba(5, 150, 105, 0.05)',
-  },
-  pickerItemText: {
+  pillText: {
     color: '#64748B',
+    fontWeight: '600',
+    fontSize: 13,
+  },
+  pillTextActive: {
+    color: '#1E293B',
+    fontWeight: '700',
+  },
+  amountInputBlock: {
+    alignItems: 'center',
+    marginBottom: 32,
+  },
+  amountRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    justifyContent: 'center',
+    marginBottom: 8,
+  },
+  currencyLabel: {
+    fontSize: 24,
+    fontWeight: '700',
+    marginRight: 2,
+  },
+  hugeAmountInput: {
+    fontSize: 54,
+    fontWeight: '700',
+    textAlign: 'center',
+    minWidth: 120,
+    paddingVertical: 0,
+  },
+  descDottedInput: {
+    fontSize: 15,
+    paddingVertical: 4,
+    width: '80%',
+    borderBottomWidth: 1.5,
+    borderStyle: 'dashed',
+    marginTop: 4,
+  },
+  dateCard: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderRadius: 16,
+    borderWidth: 1,
+    padding: 16,
+    marginBottom: 20,
+  },
+  dateLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  dateLabel: {
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  dateRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  dateValue: {
     fontSize: 14,
     fontWeight: '500',
   },
-  pickerItemTextActive: {
-    color: '#0F172A',
-    fontWeight: 'bold',
+  sectionContainer: {
+    borderRadius: 16,
+    borderWidth: 1,
+    padding: 16,
+    marginBottom: 20,
   },
-  categoriesGrid: {
+  selectLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 1,
+    marginBottom: 12,
+  },
+  horizontalScroll: {
+    gap: 8,
+  },
+  walletChip: {
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  walletChipActive: {
+    borderWidth: 2,
+    backgroundColor: 'rgba(37, 99, 235, 0.05)',
+  },
+  walletColorIndicator: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  walletChipText: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  categorySection: {
+    marginBottom: 24,
+  },
+  categoryGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 8,
-    marginBottom: 16,
   },
-  categoryBubble: {
-    flexDirection: 'row',
-    backgroundColor: '#F8FAFC',
-    borderWidth: 1,
-    borderRadius: 10,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    alignItems: 'center',
-    borderColor: '#E2E8F0',
-  },
-  categoryBubbleActive: {
-    backgroundColor: '#F1F5F9',
-  },
-  categoryEmoji: {
-    marginRight: 6,
-    fontSize: 16,
-  },
-  categoryLabel: {
-    color: '#0F172A',
-    fontSize: 13,
-  },
-  textInput: {
-    backgroundColor: '#F8FAFC',
-    borderColor: '#E2E8F0',
-    borderWidth: 1,
-    borderRadius: 12,
-    height: 48,
-    paddingHorizontal: 14,
-    color: '#0F172A',
-    fontSize: 15,
-    marginBottom: 24,
-  },
-  saveButton: {
-    backgroundColor: '#059669',
-    borderRadius: 12,
-    height: 52,
+  categoryCard: {
+    width: (SCREEN_WIDTH - 48 - 24) / 4,
+    height: 90,
+    borderRadius: 16,
+    borderWidth: 2,
+    borderColor: 'transparent',
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#059669',
+    padding: 6,
+    shadowColor: '#000000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 4,
+    shadowOpacity: 0.02,
+    shadowRadius: 6,
+    elevation: 2,
   },
-  saveButtonText: {
-    color: '#FFFFFF',
-    fontWeight: 'bold',
-    fontSize: 16,
+  categoryCardActive: {
+    borderColor: '#3B82F6',
+    shadowOpacity: 0.05,
   },
-  splitSection: {
-    borderTopWidth: 1,
-    borderTopColor: '#E2E8F0',
-    paddingTop: 16,
-    marginBottom: 20,
+  categoryIconWrapper: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 6,
   },
-  splitCheckboxRow: {
+  categoryCardLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    textAlign: 'center',
+  },
+  splitSectionCard: {
+    borderRadius: 16,
+    borderWidth: 1,
+    padding: 16,
+    marginBottom: 24,
+  },
+  splitToggleRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    marginBottom: 12,
   },
-  splitCheckboxLabel: {
-    fontFamily: 'System',
+  splitToggleText: {
     fontSize: 14,
-    fontWeight: 'bold',
-    color: '#475569',
-  },
-  splitControls: {
-    marginTop: 8,
-  },
-  subLabel: {
-    fontFamily: 'System',
-    fontSize: 12,
     fontWeight: '600',
-    color: '#64748B',
-    marginBottom: 6,
-    marginTop: 8,
+  },
+  splitExpandable: {
+    marginTop: 16,
+  },
+  subSectionTitle: {
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+    marginBottom: 8,
+    marginTop: 12,
   },
   friendScroll: {
-    paddingBottom: 6,
     gap: 8,
+    paddingBottom: 4,
   },
-  friendBubble: {
+  friendChip: {
     paddingVertical: 6,
     paddingHorizontal: 12,
-    backgroundColor: '#F8FAFC',
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
   },
-  friendBubbleActive: {
+  friendChipActive: {
     backgroundColor: 'rgba(5, 150, 105, 0.08)',
     borderColor: '#059669',
   },
-  friendBubbleText: {
-    fontFamily: 'System',
+  friendChipText: {
     fontSize: 12,
+    fontWeight: '600',
     color: '#64748B',
   },
-  friendBubbleTextActive: {
+  friendChipTextActive: {
     color: '#059669',
-    fontWeight: 'bold',
   },
   splitTypeRow: {
     flexDirection: 'row',
     gap: 8,
-    marginBottom: 12,
   },
-  splitTypeBtn: {
+  splitTypeButton: {
     flex: 1,
-    height: 36,
+    height: 38,
     borderRadius: 8,
-    backgroundColor: '#F8FAFC',
     borderWidth: 1,
-    borderColor: '#E2E8F0',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  splitTypeBtnActive: {
+  splitTypeButtonActive: {
     backgroundColor: '#059669',
     borderColor: '#059669',
   },
-  splitTypeBtnText: {
-    fontFamily: 'System',
+  splitTypeButtonText: {
     fontSize: 12,
-    color: '#64748B',
     fontWeight: '600',
+    color: '#64748B',
   },
-  splitTypeBtnTextActive: {
+  splitTypeButtonTextActive: {
     color: '#FFFFFF',
+  },
+  splitAmountInput: {
+    height: 44,
+    borderRadius: 10,
+    borderWidth: 1,
+    paddingHorizontal: 12,
+    fontSize: 14,
+  },
+  saveBtn: {
+    backgroundColor: '#1E293B',
+    borderRadius: 14,
+    height: 52,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 8,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  saveBtnText: {
+    color: '#FFFFFF',
+    fontWeight: 'bold',
+    fontSize: 16,
   },
 });
