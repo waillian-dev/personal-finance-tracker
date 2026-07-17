@@ -6,19 +6,46 @@ import {
   ScrollView,
   SafeAreaView,
   TouchableOpacity,
+  Image,
+  Switch,
+  Dimensions,
 } from 'react-native';
 import { FontAwesome } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useAuthStore } from '../../store/authStore';
-import { formatCurrency } from '../../utils/currency';
 import CustomAlert from '../../components/CustomAlert';
 import { useThemeColors } from '../../hooks/useThemeColors';
+
+// Solar Icons
+import * as SolarBold from '@solar-icons/react-native/Bold';
+import {
+  AltArrowRight,
+  Card,
+  DocumentText,
+  Devices,
+  Key,
+  Eye,
+  Global,
+  QuestionCircle,
+  ShieldKeyhole,
+  CheckCircle,
+  Logout,
+  CloseCircle,
+  Widget,
+} from '@solar-icons/react-native/Bold';
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 export default function ProfileScreen() {
   const { colors, isDark } = useThemeColors();
   const { user, logout } = useAuthStore();
   const router = useRouter();
+  
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+
+  // Switch Toggle States
+  const [faceIdEnabled, setFaceIdEnabled] = useState(true);
+  const [hideBalancesEnabled, setHideBalancesEnabled] = useState(false);
 
   const handleLogout = () => {
     setShowLogoutConfirm(true);
@@ -32,105 +59,160 @@ export default function ProfileScreen() {
     }
   };
 
+  const renderIcon = (IconComponent: any, bgColor: string, iconColor: string) => {
+    return (
+      <View style={[styles.iconWrapper, { backgroundColor: bgColor }]}>
+        <IconComponent size={20} color={iconColor} />
+      </View>
+    );
+  };
+
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-      <ScrollView contentContainerStyle={styles.scrollContainer} keyboardShouldPersistTaps="handled">
-        {/* Profile Avatar Card */}
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
+      {/* Centered screen title */}
+      <Text style={[styles.screenTitle, { color: colors.text }]}>Profile & Settings</Text>
+
+      <ScrollView contentContainerStyle={styles.scrollContainer} showsVerticalScrollIndicator={false}>
+        
+        {/* ambient background gradient blobs */}
+        <View style={styles.gradientContainer}>
+          <View style={styles.blobPink} />
+          <View style={styles.blobBlue} />
+          <View style={[styles.gradientOverlay, { backgroundColor: isDark ? 'rgba(15, 23, 42, 0.45)' : 'rgba(255, 255, 255, 0.45)' }]} />
+        </View>
+
+        {/* User Info & Avatar */}
         <View style={styles.avatarSection}>
-          <View style={[styles.avatarCircle, { backgroundColor: isDark ? '#115E59' : '#D1FAE5' }]}>
-            <Text style={[styles.avatarText, { color: isDark ? '#2DD4BF' : '#059669' }]}>
-              {user?.name ? user.name.charAt(0).toUpperCase() : 'U'}
-            </Text>
+          <View style={styles.avatarWrapper}>
+            <Image
+              source={{ uri: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80' }}
+              style={styles.avatarImage}
+            />
+            <TouchableOpacity style={[styles.cameraButton, { backgroundColor: colors.card, borderColor: colors.border }]}>
+              <FontAwesome name="camera" size={12} color={colors.textSecondary} />
+            </TouchableOpacity>
           </View>
-          <Text style={[styles.userName, { color: colors.text }]}>{user?.name || 'User'}</Text>
-          <Text style={[styles.userEmail, { color: colors.textSecondary }]}>{user?.email || 'user@example.com'}</Text>
+          
+          <Text style={[styles.userName, { color: colors.text }]}>
+            {user?.name || 'Livia Smith'}
+          </Text>
+          <Text style={[styles.userEmail, { color: colors.textSecondary }]}>
+            {user?.email || 'liviasmith@gmail.com'}
+          </Text>
         </View>
 
-        {/* PROFILE DETAILS DISPLAY */}
-        <View style={[styles.detailsCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          <View style={styles.detailRow}>
-            <View style={[styles.detailIconWrapper, { backgroundColor: isDark ? '#334155' : '#F1F5F9' }]}>
-              <FontAwesome name="money" size={16} color="#10B981" />
-            </View>
-            <View style={styles.detailTextContainer}>
-              <Text style={[styles.detailLabel, { color: colors.textSecondary }]}>Base Currency</Text>
-              <Text style={[styles.detailValue, { color: colors.text }]}>{user?.currency || 'USD'}</Text>
-            </View>
+        {/* Group 1: General Account Features */}
+        <View style={[styles.menuGroup, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <TouchableOpacity style={[styles.menuItem, { borderBottomColor: colors.border }]} onPress={() => router.push('/settings')}>
+            {renderIcon(Card, 'rgba(59, 130, 246, 0.1)', '#3B82F6')}
+            <Text style={[styles.menuText, { color: colors.text }]}>Card confirmation</Text>
+            <AltArrowRight size={18} color={colors.textSecondary} />
+          </TouchableOpacity>
+
+          <TouchableOpacity style={[styles.menuItem, { borderBottomColor: colors.border }]} onPress={() => router.push('/settings')}>
+            {renderIcon(Widget, 'rgba(16, 185, 129, 0.1)', '#10B981')}
+            <Text style={[styles.menuText, { color: colors.text }]}>Account details</Text>
+            <AltArrowRight size={18} color={colors.textSecondary} />
+          </TouchableOpacity>
+
+          <TouchableOpacity style={[styles.menuItem, { borderBottomColor: colors.border }]} onPress={() => router.push('/transactions')}>
+            {renderIcon(DocumentText, 'rgba(139, 92, 246, 0.1)', '#8B5CF6')}
+            <Text style={[styles.menuText, { color: colors.text }]}>Transaction history</Text>
+            <AltArrowRight size={18} color={colors.textSecondary} />
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.menuItem} onPress={() => router.push('/settings')}>
+            {renderIcon(DocumentText, 'rgba(245, 158, 11, 0.1)', '#F59E0B')}
+            <Text style={[styles.menuText, { color: colors.text }]}>Documents and statements</Text>
+            <AltArrowRight size={18} color={colors.textSecondary} />
+          </TouchableOpacity>
+        </View>
+
+        {/* Group 2: SECURITY */}
+        <Text style={[styles.sectionHeader, { color: colors.textSecondary }]}>SECURITY</Text>
+        <View style={[styles.menuGroup, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <TouchableOpacity style={[styles.menuItem, { borderBottomColor: colors.border }]}>
+            {renderIcon(Devices, 'rgba(59, 130, 246, 0.1)', '#3B82F6')}
+            <Text style={[styles.menuText, { color: colors.text }]}>Devices</Text>
+            <AltArrowRight size={18} color={colors.textSecondary} />
+          </TouchableOpacity>
+
+          <TouchableOpacity style={[styles.menuItem, { borderBottomColor: colors.border }]}>
+            {renderIcon(Key, 'rgba(139, 92, 246, 0.1)', '#8B5CF6')}
+            <Text style={[styles.menuText, { color: colors.text }]}>Change passcode</Text>
+            <AltArrowRight size={18} color={colors.textSecondary} />
+          </TouchableOpacity>
+
+          <View style={[styles.menuItem, { borderBottomColor: colors.border }]}>
+            {renderIcon(ShieldKeyhole, 'rgba(16, 185, 129, 0.1)', '#10B981')}
+            <Text style={[styles.menuText, { color: colors.text }]}>Face ID</Text>
+            <Switch
+              value={faceIdEnabled}
+              onValueChange={setFaceIdEnabled}
+              trackColor={{ false: '#CBD5E1', true: '#3B82F6' }}
+              thumbColor="#FFFFFF"
+            />
           </View>
 
-          <View style={styles.detailRow}>
-            <View style={[styles.detailIconWrapper, { backgroundColor: isDark ? '#334155' : '#F1F5F9' }]}>
-              <FontAwesome name="dollar" size={16} color="#F59E0B" />
-            </View>
-            <View style={styles.detailTextContainer}>
-              <Text style={[styles.detailLabel, { color: colors.textSecondary }]}>Monthly Salary Baseline</Text>
-              <Text style={[styles.detailValue, { color: colors.text }]}>
-                {formatCurrency(user?.monthlySalary || 0, user?.currency)}
-              </Text>
-            </View>
-          </View>
-
-          <View style={[styles.detailRow, styles.lastDetailRow]}>
-            <View style={[styles.detailIconWrapper, { backgroundColor: isDark ? '#334155' : '#F1F5F9' }]}>
-              <FontAwesome name="shield" size={16} color="#3B82F6" />
-            </View>
-            <View style={styles.detailTextContainer}>
-              <Text style={[styles.detailLabel, { color: colors.textSecondary }]}>Account Status</Text>
-              <Text style={[styles.detailValue, { color: colors.text }]}>
-                {user?.isVerified ? 'Verified' : 'Active'}
-              </Text>
-            </View>
+          <View style={styles.menuItem}>
+            {renderIcon(Eye, 'rgba(239, 68, 68, 0.1)', '#EF4444')}
+            <Text style={[styles.menuText, { color: colors.text }]}>Hide balances</Text>
+            <Switch
+              value={hideBalancesEnabled}
+              onValueChange={setHideBalancesEnabled}
+              trackColor={{ false: '#CBD5E1', true: '#3B82F6' }}
+              thumbColor="#FFFFFF"
+            />
           </View>
         </View>
 
-        <Text style={[styles.sectionHeader, { color: colors.textSecondary }]}>Notification Config</Text>
-        <View style={[styles.detailsCard, { backgroundColor: colors.card, borderColor: colors.border, marginBottom: 24 }]}>
-          <View style={styles.detailRow}>
-            <View style={[styles.detailIconWrapper, { backgroundColor: isDark ? '#334155' : '#F1F5F9' }]}>
-              <FontAwesome name="bell" size={15} color="#059669" />
-            </View>
-            <View style={styles.detailTextContainer}>
-              <Text style={[styles.detailLabel, { color: colors.textSecondary }]}>Salary Credit Reminders</Text>
-              <Text style={[styles.detailValue, { color: colors.text }]}>
-                {user?.notificationSalary !== false ? 'Enabled' : 'Disabled'}
-              </Text>
-            </View>
-          </View>
+        {/* Group 3: GENERAL */}
+        <Text style={[styles.sectionHeader, { color: colors.textSecondary }]}>GENERAL</Text>
+        <View style={[styles.menuGroup, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <TouchableOpacity style={[styles.menuItem, { borderBottomColor: colors.border }]}>
+            {renderIcon(Global, 'rgba(59, 130, 246, 0.1)', '#3B82F6')}
+            <Text style={[styles.menuText, { color: colors.text }]}>Languages</Text>
+            <AltArrowRight size={18} color={colors.textSecondary} />
+          </TouchableOpacity>
 
-          <View style={styles.detailRow}>
-            <View style={[styles.detailIconWrapper, { backgroundColor: isDark ? '#334155' : '#F1F5F9' }]}>
-              <FontAwesome name="warning" size={15} color="#EF4444" />
-            </View>
-            <View style={styles.detailTextContainer}>
-              <Text style={[styles.detailLabel, { color: colors.textSecondary }]}>Monthly Expense Warning (80% Limit)</Text>
-              <Text style={[styles.detailValue, { color: colors.text }]}>
-                {user?.notificationExpenseLimit !== false ? 'Enabled' : 'Disabled'}
-              </Text>
-            </View>
-          </View>
-
-          <View style={[styles.detailRow, styles.lastDetailRow]}>
-            <View style={[styles.detailIconWrapper, { backgroundColor: isDark ? '#334155' : '#F1F5F9' }]}>
-              <FontAwesome name="info-circle" size={15} color="#3B82F6" />
-            </View>
-            <View style={styles.detailTextContainer}>
-              <Text style={[styles.detailLabel, { color: colors.textSecondary }]}>Monthly Card Fee Warnings</Text>
-              <Text style={[styles.detailValue, { color: colors.text }]}>
-                {user?.notificationMonthlyFee !== false ? 'Enabled' : 'Disabled'}
-              </Text>
-            </View>
-          </View>
+          <TouchableOpacity style={styles.menuItem}>
+            {renderIcon(QuestionCircle, 'rgba(139, 92, 246, 0.1)', '#8B5CF6')}
+            <Text style={[styles.menuText, { color: colors.text }]}>Help and Support</Text>
+            <AltArrowRight size={18} color={colors.textSecondary} />
+          </TouchableOpacity>
         </View>
 
-        <TouchableOpacity style={styles.settingsButton} onPress={() => router.push('/settings')}>
-          <FontAwesome name="cog" size={18} color="#FFFFFF" />
-          <Text style={styles.settingsButtonText}>Configuration Settings</Text>
-        </TouchableOpacity>
+        {/* Group 4: LEGAL */}
+        <Text style={[styles.sectionHeader, { color: colors.textSecondary }]}>LEGAL</Text>
+        <View style={[styles.menuGroup, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <TouchableOpacity style={[styles.menuItem, { borderBottomColor: colors.border }]}>
+            {renderIcon(ShieldKeyhole, 'rgba(16, 185, 129, 0.1)', '#10B981')}
+            <Text style={[styles.menuText, { color: colors.text }]}>Privacy Policy</Text>
+            <AltArrowRight size={18} color={colors.textSecondary} />
+          </TouchableOpacity>
 
-        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-          <FontAwesome name="sign-out" size={16} color="#FFFFFF" />
-          <Text style={styles.logoutButtonText}>Log Out</Text>
-        </TouchableOpacity>
+          <TouchableOpacity style={styles.menuItem}>
+            {renderIcon(CheckCircle, 'rgba(245, 158, 11, 0.1)', '#F59E0B')}
+            <Text style={[styles.menuText, { color: colors.text }]}>Terms and Conditions</Text>
+            <AltArrowRight size={18} color={colors.textSecondary} />
+          </TouchableOpacity>
+        </View>
+
+        {/* Group 5: Danger Actions */}
+        <View style={[styles.menuGroup, { backgroundColor: colors.card, borderColor: colors.border, marginTop: 24 }]}>
+          <TouchableOpacity style={[styles.menuItem, { borderBottomColor: colors.border }]} onPress={handleLogout}>
+            {renderIcon(Logout, 'rgba(59, 130, 246, 0.1)', '#3B82F6')}
+            <Text style={[styles.menuText, { color: colors.text }]}>Log Out</Text>
+            <AltArrowRight size={18} color={colors.textSecondary} />
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.menuItem}>
+            {renderIcon(CloseCircle, 'rgba(239, 68, 68, 0.1)', '#EF4444')}
+            <Text style={[styles.menuText, { color: '#EF4444' }]}>Delete account</Text>
+            <AltArrowRight size={18} color={colors.textSecondary} />
+          </TouchableOpacity>
+        </View>
+
       </ScrollView>
 
       <CustomAlert
@@ -148,146 +230,129 @@ export default function ProfileScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
+  safeArea: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+  },
+  screenTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    textAlign: 'center',
+    paddingVertical: 14,
   },
   scrollContainer: {
-    padding: 24,
-    paddingTop: 48,
-    paddingBottom: 110,
+    paddingHorizontal: 24,
+    paddingTop: 10,
+    paddingBottom: 40,
+  },
+  gradientContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 180,
+    overflow: 'hidden',
+  },
+  blobPink: {
+    position: 'absolute',
+    width: 260,
+    height: 260,
+    borderRadius: 130,
+    backgroundColor: 'rgba(236, 72, 153, 0.18)',
+    top: -90,
+    left: -40,
+  },
+  blobBlue: {
+    position: 'absolute',
+    width: 240,
+    height: 240,
+    borderRadius: 120,
+    backgroundColor: 'rgba(59, 130, 246, 0.18)',
+    top: -70,
+    right: -20,
+  },
+  gradientOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
   },
   avatarSection: {
     alignItems: 'center',
-    marginBottom: 32,
+    marginTop: 20,
+    marginBottom: 28,
   },
-  avatarCircle: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+  avatarWrapper: {
+    position: 'relative',
+    marginBottom: 16,
+  },
+  avatarImage: {
+    width: 90,
+    height: 90,
+    borderRadius: 45,
+    borderWidth: 3,
+    borderColor: '#FFFFFF',
+  },
+  cameraButton: {
+    position: 'absolute',
+    bottom: -2,
+    right: -2,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: '#A7F3D0',
-  },
-  avatarText: {
-    fontFamily: 'System',
-    fontSize: 36,
-    fontWeight: 'bold',
-    color: '#10B981',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   userName: {
-    fontFamily: 'System',
     fontSize: 22,
-    fontWeight: 'bold',
-    color: '#0F172A',
-    marginBottom: 4,
+    fontWeight: '700',
   },
   userEmail: {
-    fontFamily: 'System',
-    fontSize: 14,
-    color: '#64748B',
-  },
-  detailsCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.02,
-    shadowRadius: 8,
-    elevation: 1,
-    marginBottom: 20,
-  },
-  detailRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
-  },
-  lastDetailRow: {
-    borderBottomWidth: 0,
-    paddingBottom: 0,
-  },
-  detailIconWrapper: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    backgroundColor: '#F8FAFC',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 16,
-  },
-  detailTextContainer: {
-    flex: 1,
-  },
-  detailLabel: {
-    fontFamily: 'System',
-    fontSize: 12,
-    color: '#64748B',
-    marginBottom: 2,
-  },
-  detailValue: {
-    fontFamily: 'System',
-    fontSize: 15,
-    fontWeight: 'bold',
-    color: '#0F172A',
+    fontSize: 13,
+    fontWeight: '500',
+    marginTop: 4,
   },
   sectionHeader: {
-    fontFamily: 'System',
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#0F172A',
-    marginTop: 16,
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+    marginTop: 24,
     marginBottom: 12,
-    alignSelf: 'flex-start',
   },
-  settingsButton: {
-    width: '100%',
-    flexDirection: 'row',
-    backgroundColor: '#059669',
-    borderRadius: 12,
-    height: 52,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    marginBottom: 12,
-    shadowColor: '#059669',
+  menuGroup: {
+    borderRadius: 24,
+    borderWidth: 1,
+    paddingHorizontal: 16,
+    overflow: 'hidden',
+    shadowColor: '#000000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
+    shadowOpacity: 0.01,
     shadowRadius: 8,
     elevation: 2,
   },
-  settingsButtonText: {
-    fontFamily: 'System',
-    color: '#FFFFFF',
-    fontWeight: 'bold',
-    fontSize: 16,
-  },
-  logoutButton: {
-    width: '100%',
+  menuItem: {
+    height: 58,
     flexDirection: 'row',
-    backgroundColor: '#EF4444',
-    borderRadius: 12,
-    height: 52,
+    alignItems: 'center',
+    borderBottomWidth: 1,
+  },
+  iconWrapper: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
-    shadowColor: '#EF4444',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 2,
+    marginRight: 14,
   },
-  logoutButtonText: {
-    fontFamily: 'System',
-    color: '#FFFFFF',
-    fontWeight: 'bold',
-    fontSize: 16,
+  menuText: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: '600',
   },
 });
