@@ -10,8 +10,11 @@ import {
   RefreshControl,
   SafeAreaView,
   Animated,
+  Dimensions,
+  Modal,
 } from 'react-native';
 import { FontAwesome } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import api from '../../services/api';
 import { Wallet } from '../../types';
 import { useAuthStore } from '../../store/authStore';
@@ -19,7 +22,16 @@ import { formatCurrency } from '../../utils/currency';
 import CustomAlert from '../../components/CustomAlert';
 import { useThemeColors } from '../../hooks/useThemeColors';
 
+// Solar Icons
+import * as SolarBold from '@solar-icons/react-native/Bold';
+import {
+  AddCircle,
+  AltArrowRight,
+  Widget,
+} from '@solar-icons/react-native/Bold';
+
 const COLORS = ['#10B981', '#3B82F6', '#8B5CF6', '#F59E0B', '#EF4444', '#EC4899'];
+const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 interface SavingGoal {
   _id: string;
@@ -33,14 +45,20 @@ interface SavingGoal {
 
 export default function GoalsScreen() {
   const { colors, isDark } = useThemeColors();
+  const router = useRouter();
+  const { user } = useAuthStore();
+
   const [goals, setGoals] = useState<SavingGoal[]>([]);
   const [wallets, setWallets] = useState<Wallet[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const { user } = useAuthStore();
+
+  // Bottom Sheet Drawer state
+  const [isSheetOpen, setIsSheetOpen] = useState(false);
+  const sheetTranslateY = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
+  const backdropOpacity = useRef(new Animated.Value(0)).current;
 
   // Add/Edit Goal Form State
-  const [isAdding, setIsAdding] = useState(false);
   const [editingGoalId, setEditingGoalId] = useState<string | null>(null);
   const [name, setName] = useState('');
   const [targetAmount, setTargetAmount] = useState('');
@@ -49,13 +67,8 @@ export default function GoalsScreen() {
   const [formError, setFormError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Expanded interaction for savings contribution/withdrawals
-  const [activeGoalIdForDeposit, setActiveGoalIdForDeposit] = useState<string | null>(null);
-  const [activeGoalIdForWithdraw, setActiveGoalIdForWithdraw] = useState<string | null>(null);
-  const [selectedWalletId, setSelectedWalletId] = useState('');
-  const [actionAmount, setActionAmount] = useState('');
-  const [actionError, setActionError] = useState('');
-  const [isActionSubmitting, setIsActionSubmitting] = useState(false);
+  // Time ticker state to update clock in real-time
+  const [tickerTime, setTickerTime] = useState(new Date());
 
   // Custom Alert Popups State
   const [alertDialog, setAlertDialog] = useState({
@@ -101,9 +114,6 @@ export default function GoalsScreen() {
       }
       if (walletsRes.data.success) {
         setWallets(walletsRes.data.data);
-        if (walletsRes.data.data.length > 0) {
-          setSelectedWalletId(walletsRes.data.data[0]._id);
-        }
       }
     } catch (err: any) {
       console.error('Failed to load goals data:', err);
@@ -117,9 +127,52 @@ export default function GoalsScreen() {
     fetchData();
   }, []);
 
+  // Update countdown ticker every second
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setTickerTime(new Date());
+    }, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
   const onRefresh = () => {
     setRefreshing(true);
     fetchData();
+  };
+
+  // Drawer Animation Controls
+  const openBottomSheet = () => {
+    setIsSheetOpen(true);
+    Animated.parallel([
+      Animated.timing(backdropOpacity, {
+        toValue: 0.4,
+        duration: 250,
+        useNativeDriver: true,
+      }),
+      Animated.timing(sheetTranslateY, {
+        toValue: 0,
+        duration: 300,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  };
+
+  const closeBottomSheet = () => {
+    Animated.parallel([
+      Animated.timing(backdropOpacity, {
+        toValue: 0,
+        duration: 200,
+        useNativeDriver: true,
+      }),
+      Animated.timing(sheetTranslateY, {
+        toValue: SCREEN_HEIGHT,
+        duration: 250,
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      setIsSheetOpen(false);
+      resetForm();
+    });
   };
 
   const handleStartEditGoal = (goal: SavingGoal) => {
@@ -128,7 +181,7 @@ export default function GoalsScreen() {
     setTargetAmount(goal.targetAmount.toString());
     setTargetDate(goal.targetDate ? new Date(goal.targetDate).toISOString().split('T')[0] : '');
     setSelectedColor(goal.color);
-    setIsAdding(true);
+    openBottomSheet();
   };
 
   const handleDeleteGoal = (goal: SavingGoal) => {
@@ -186,7 +239,7 @@ export default function GoalsScreen() {
           editingGoalId ? 'Goal updated successfully' : 'Goal created successfully',
           'success'
         );
-        resetForm();
+        closeBottomSheet();
         fetchData();
       }
     } catch (err: any) {
@@ -196,80 +249,53 @@ export default function GoalsScreen() {
     }
   };
 
-  const handleAddSavings = async (goalId: string) => {
-    const amountNum = parseFloat(actionAmount);
-    if (isNaN(amountNum) || amountNum <= 0) {
-      setActionError('Please enter a valid amount greater than zero');
-      return;
-    }
-    if (!selectedWalletId) {
-      setActionError('Please select a source wallet');
-      return;
-    }
-
-    setActionError('');
-    setIsActionSubmitting(true);
-
-    try {
-      const res = await api.post(`/saving-goals/${goalId}/add-savings`, {
-        amount: amountNum,
-        walletId: selectedWalletId,
-      });
-
-      if (res.data.success) {
-        triggerAlert('Success', 'Savings contribution logged successfully!', 'success');
-        setActiveGoalIdForDeposit(null);
-        setActionAmount('');
-        fetchData();
-      }
-    } catch (err: any) {
-      setActionError(err.response?.data?.error || 'Failed to process contribution');
-    } finally {
-      setIsActionSubmitting(false);
-    }
-  };
-
-  const handleWithdrawSavings = async (goalId: string) => {
-    const amountNum = parseFloat(actionAmount);
-    if (isNaN(amountNum) || amountNum <= 0) {
-      setActionError('Please enter a valid amount greater than zero');
-      return;
-    }
-    if (!selectedWalletId) {
-      setActionError('Please select a destination wallet');
-      return;
-    }
-
-    setActionError('');
-    setIsActionSubmitting(true);
-
-    try {
-      const res = await api.post(`/saving-goals/${goalId}/withdraw-savings`, {
-        amount: amountNum,
-        walletId: selectedWalletId,
-      });
-
-      if (res.data.success) {
-        triggerAlert('Success', 'Savings withdrawn successfully!', 'success');
-        setActiveGoalIdForWithdraw(null);
-        setActionAmount('');
-        fetchData();
-      }
-    } catch (err: any) {
-      setActionError(err.response?.data?.error || 'Failed to process withdrawal');
-    } finally {
-      setIsActionSubmitting(false);
-    }
-  };
-
   const resetForm = () => {
     setName('');
     setTargetAmount('');
     setTargetDate('');
     setSelectedColor(COLORS[0]);
     setEditingGoalId(null);
-    setIsAdding(false);
     setFormError('');
+  };
+
+  const getCountdown = (targetDateStr?: string) => {
+    if (!targetDateStr) return 'No target date';
+    const target = new Date(targetDateStr).getTime();
+    const now = tickerTime.getTime();
+    const diff = target - now;
+
+    if (diff <= 0) return 'Goal ended';
+
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+    const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+
+    const pad = (num: number) => String(num).padStart(2, '0');
+
+    return `${days} days ${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
+  };
+
+  const getGoalIcon = (name: string, color: string) => {
+    const lowerName = name.toLowerCase();
+    let IconComponent = SolarBold.MedalStar;
+    if (lowerName.includes('vacation') || lowerName.includes('trip') || lowerName.includes('mexico') || lowerName.includes('vietnam') || lowerName.includes('travel')) {
+      IconComponent = (SolarBold as any)['Plain'] || SolarBold.Widget;
+    } else if (lowerName.includes('tech') || lowerName.includes('iphone') || lowerName.includes('phone') || lowerName.includes('computer')) {
+      IconComponent = (SolarBold as any)['Smartphone'] || SolarBold.Widget;
+    } else if (lowerName.includes('car') || lowerName.includes('bike') || lowerName.includes('vehicle')) {
+      IconComponent = (SolarBold as any)['Traffic'] || SolarBold.Widget;
+    } else if (lowerName.includes('home') || lowerName.includes('house') || lowerName.includes('rent') || lowerName.includes('apartment')) {
+      IconComponent = (SolarBold as any)['Home2'] || SolarBold.Widget;
+    } else if (lowerName.includes('study') || lowerName.includes('school') || lowerName.includes('education') || lowerName.includes('college')) {
+      IconComponent = (SolarBold as any)['Notebook'] || SolarBold.Widget;
+    }
+
+    return (
+      <View style={[styles.iconWrapper, { backgroundColor: `${color}15` }]}>
+        <IconComponent size={22} color={color} />
+      </View>
+    );
   };
 
   if (isLoading) {
@@ -282,6 +308,9 @@ export default function GoalsScreen() {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      {/* Centered Large Header */}
+      <Text style={[styles.headerTitle, { color: colors.text }]}>Goals</Text>
+
       <ScrollView
         contentContainerStyle={styles.scrollContainer}
         refreshControl={
@@ -289,131 +318,208 @@ export default function GoalsScreen() {
         }
       >
         <View style={styles.headerRow}>
-          <Text style={[styles.title, { color: colors.text }]}>Saving Goals</Text>
+          <Text style={[styles.title, { color: '#1E293B' }]}>All My Goals</Text>
           <TouchableOpacity
             style={styles.addButton}
-            onPress={() => {
-              if (isAdding) {
-                resetForm();
-              } else {
-                setIsAdding(true);
-              }
-            }}
+            onPress={openBottomSheet}
           >
-            <FontAwesome name={isAdding ? 'close' : 'plus'} size={14} color="#FFFFFF" />
-            <Text style={styles.addButtonText}> {isAdding ? 'Cancel' : 'Add Goal'}</Text>
+            <AddCircle size={18} color="#3B82F6" />
+            <Text style={styles.addButtonText}>Add Goal</Text>
           </TouchableOpacity>
         </View>
-
-        {/* Add / Edit Form Card */}
-        {isAdding ? (
-          <AnimatedFormCard colors={colors}>
-            <Text style={[styles.formTitle, { color: colors.text }]}>
-              {editingGoalId ? 'Modify Saving Goal' : 'New Goal Details'}
-            </Text>
-            {formError ? <Text style={styles.errorText}>{formError}</Text> : null}
-
-            <View style={styles.inputGroup}>
-              <Text style={[styles.label, { color: colors.textSecondary }]}>Goal Name</Text>
-              <TextInput
-                style={[styles.input, { backgroundColor: colors.inputBg, borderColor: colors.border, color: colors.text }]}
-                placeholder="e.g. Vacation Trip, Emergency Fund"
-                placeholderTextColor="#94A3B8"
-                value={name}
-                onChangeText={setName}
-              />
-            </View>
-
-            <View style={styles.inputGroup}>
-              <Text style={[styles.label, { color: colors.textSecondary }]}>Target Amount ({user?.currency || '$'})</Text>
-              <TextInput
-                style={[styles.input, { backgroundColor: colors.inputBg, borderColor: colors.border, color: colors.text }]}
-                placeholder="0.00"
-                placeholderTextColor="#94A3B8"
-                keyboardType="numeric"
-                value={targetAmount}
-                onChangeText={setTargetAmount}
-              />
-            </View>
-
-            <View style={styles.inputGroup}>
-              <Text style={[styles.label, { color: colors.textSecondary }]}>Target Date (YYYY-MM-DD - Optional)</Text>
-              <TextInput
-                style={[styles.input, { backgroundColor: colors.inputBg, borderColor: colors.border, color: colors.text }]}
-                placeholder="e.g. 2026-12-31"
-                placeholderTextColor="#94A3B8"
-                value={targetDate}
-                onChangeText={setTargetDate}
-              />
-            </View>
-
-            <Text style={[styles.label, { color: colors.textSecondary }]}>Goal Theme Color</Text>
-            <View style={styles.colorGrid}>
-              {COLORS.map((c) => (
-                <TouchableOpacity
-                  key={c}
-                  style={[
-                    styles.colorCircle,
-                    { backgroundColor: c },
-                    selectedColor === c && styles.colorCircleActive,
-                  ]}
-                  onPress={() => setSelectedColor(c)}
-                />
-              ))}
-            </View>
-
-            <TouchableOpacity
-              style={styles.submitButton}
-              onPress={handleCreateOrUpdateGoal}
-              disabled={isSubmitting}
-            >
-              {isSubmitting ? (
-                <ActivityIndicator color="#FFFFFF" size="small" />
-              ) : (
-                <Text style={styles.submitButtonText}>
-                  {editingGoalId ? 'Update Saving Goal' : 'Create Saving Goal'}
-                </Text>
-              )}
-            </TouchableOpacity>
-          </AnimatedFormCard>
-        ) : null}
 
         {/* Goals List */}
         {goals.length === 0 ? (
           <View style={[styles.emptyContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
-            <FontAwesome name="bullseye" size={48} color={colors.textSecondary} />
+            <SolarBold.MedalStar size={48} color={colors.textSecondary} />
             <Text style={[styles.emptyText, { color: colors.textSecondary }]}>No saving goals active yet.</Text>
           </View>
         ) : (
           <View style={styles.goalsList}>
-            {goals.map((goal, index) => (
-              <GoalCardItem
-                key={goal._id}
-                goal={goal}
-                index={index}
-                wallets={wallets}
-                user={user}
-                colors={colors}
-                activeGoalIdForDeposit={activeGoalIdForDeposit}
-                setActiveGoalIdForDeposit={setActiveGoalIdForDeposit}
-                activeGoalIdForWithdraw={activeGoalIdForWithdraw}
-                setActiveGoalIdForWithdraw={setActiveGoalIdForWithdraw}
-                selectedWalletId={selectedWalletId}
-                setSelectedWalletId={setSelectedWalletId}
-                actionAmount={actionAmount}
-                setActionAmount={setActionAmount}
-                actionError={actionError}
-                setActionError={setActionError}
-                isActionSubmitting={isActionSubmitting}
-                handleAddSavings={handleAddSavings}
-                handleWithdrawSavings={handleWithdrawSavings}
-                handleStartEditGoal={handleStartEditGoal}
-                handleDeleteGoal={handleDeleteGoal}
-              />
-            ))}
+            {goals.map((goal, index) => {
+              const percent = Math.min(Math.round((goal.currentAmount / goal.targetAmount) * 100), 100);
+              const nameParts = goal.name.split(/[-:]/);
+              const mainTitle = nameParts[0].trim();
+              const subtext = nameParts.length > 1 ? nameParts[1].trim() : 'Saving goal target';
+              
+              // Dynamic status chip color bubble
+              let badgeColor = '#EF4444';
+              if (percent >= 80) badgeColor = '#3B82F6';
+              else if (percent >= 50) badgeColor = '#10B981';
+              else if (percent >= 30) badgeColor = '#F59E0B';
+
+              return (
+                <TouchableOpacity
+                  key={goal._id}
+                  activeOpacity={0.9}
+                  style={[styles.goalCard, { backgroundColor: colors.card, borderColor: colors.border }]}
+                  onPress={() => router.push({ pathname: '/goal-detail', params: { id: goal._id } })}
+                >
+                  {/* Top segment */}
+                  <View style={styles.cardTopRow}>
+                    {getGoalIcon(goal.name, goal.color)}
+                    <View style={styles.cardHeaderInfo}>
+                      <Text style={[styles.goalName, { color: colors.text }]}>{mainTitle}</Text>
+                      <Text style={[styles.goalSubtext, { color: colors.textSecondary }]}>{subtext}</Text>
+                    </View>
+                    <AltArrowRight size={20} color={colors.textSecondary} />
+                  </View>
+
+                  {/* Middle row */}
+                  <View style={styles.cardMiddleRow}>
+                    <View style={styles.clockRow}>
+                      <FontAwesome name="clock-o" size={14} color={colors.textSecondary} />
+                      <Text style={[styles.clockText, { color: colors.textSecondary }]}>
+                        {getCountdown(goal.targetDate)}
+                      </Text>
+                    </View>
+
+                    <View style={[styles.badge, { backgroundColor: `${badgeColor}15` }]}>
+                      <Text style={[styles.badgeText, { color: badgeColor }]}>{percent}%</Text>
+                    </View>
+                  </View>
+
+                  {/* Slider Progress Bar */}
+                  <View style={styles.progressBarContainer}>
+                    {/* Background dashed line */}
+                    <View style={[styles.dashedTrack, { borderColor: isDark ? '#475569' : '#CBD5E1' }]} />
+                    {/* Completed solid bar */}
+                    <View style={[styles.solidFillTrack, { width: `${percent}%`, backgroundColor: goal.color }]} />
+                    {/* Circle thumb */}
+                    <View style={[styles.progressThumb, { left: `${percent}%`, backgroundColor: goal.color }]} />
+                  </View>
+
+                  {/* Bottom amounts row */}
+                  <View style={styles.cardBottomRow}>
+                    <Text style={[styles.savedAmount, { color: colors.text }]}>
+                      {formatCurrency(goal.currentAmount, user?.currency)}
+                    </Text>
+                    <Text style={[styles.targetAmount, { color: colors.text }]}>
+                      {formatCurrency(goal.targetAmount, user?.currency)}
+                    </Text>
+                  </View>
+
+                  {/* Optional Pace Alert Chip (e.g. Technology) */}
+                  {percent >= 70 && (
+                    <View style={[styles.paceAlert, { backgroundColor: isDark ? '#1E293B' : '#F8FAFC' }]}>
+                      <Text style={[styles.paceAlertText, { color: colors.textSecondary }]}>
+                        🚀 You're <Text style={{ fontWeight: '700', color: '#3B82F6' }}>ahead of pace</Text> and should reach your goal ahead of schedule.
+                      </Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
+              );
+            })}
           </View>
         )}
       </ScrollView>
+
+      {/* Rise-From-Bottom Drawer Modal (Add / Edit Goal) */}
+      <Modal
+        visible={isSheetOpen}
+        transparent
+        animationType="none"
+        onRequestClose={closeBottomSheet}
+      >
+        <View style={styles.modalOverlay}>
+          {/* Dismiss Backdrop */}
+          <TouchableOpacity
+            style={styles.modalBackdrop}
+            activeOpacity={1}
+            onPress={closeBottomSheet}
+          >
+            <Animated.View style={[styles.backdropBackground, { opacity: backdropOpacity }]} />
+          </TouchableOpacity>
+
+          {/* Form Bottom Drawer Container */}
+          <Animated.View
+            style={[
+              styles.bottomDrawer,
+              {
+                backgroundColor: colors.card,
+                transform: [{ translateY: sheetTranslateY }],
+              },
+            ]}
+          >
+            {/* Header Drag Indicator bar */}
+            <View style={[styles.dragIndicator, { backgroundColor: colors.border }]} />
+
+            <View style={styles.drawerHeader}>
+              <Text style={[styles.drawerTitle, { color: colors.text }]}>
+                {editingGoalId ? 'Edit Goal' : 'Add New Goal'}
+              </Text>
+              <TouchableOpacity onPress={closeBottomSheet}>
+                <Text style={styles.drawerCancelText}>Cancel</Text>
+              </TouchableOpacity>
+            </View>
+
+            {formError ? <Text style={styles.errorText}>{formError}</Text> : null}
+
+            <ScrollView contentContainerStyle={styles.drawerForm} keyboardShouldPersistTaps="handled">
+              <View style={styles.inputGroup}>
+                <Text style={[styles.label, { color: colors.textSecondary }]}>Goal Name</Text>
+                <TextInput
+                  style={[styles.input, { backgroundColor: colors.inputBg, borderColor: colors.border, color: colors.text }]}
+                  placeholder="e.g. Vacation - Trip to Mexico"
+                  placeholderTextColor="#94A3B8"
+                  value={name}
+                  onChangeText={setName}
+                />
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={[styles.label, { color: colors.textSecondary }]}>Target Amount ({user?.currency || '$'})</Text>
+                <TextInput
+                  style={[styles.input, { backgroundColor: colors.inputBg, borderColor: colors.border, color: colors.text }]}
+                  placeholder="0.00"
+                  placeholderTextColor="#94A3B8"
+                  keyboardType="numeric"
+                  value={targetAmount}
+                  onChangeText={setTargetAmount}
+                />
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={[styles.label, { color: colors.textSecondary }]}>Target Date (YYYY-MM-DD - Optional)</Text>
+                <TextInput
+                  style={[styles.input, { backgroundColor: colors.inputBg, borderColor: colors.border, color: colors.text }]}
+                  placeholder="e.g. 2026-12-31"
+                  placeholderTextColor="#94A3B8"
+                  value={targetDate}
+                  onChangeText={setTargetDate}
+                />
+              </View>
+
+              <Text style={[styles.label, { color: colors.textSecondary, marginBottom: 12 }]}>Theme Color</Text>
+              <View style={styles.colorGrid}>
+                {COLORS.map((c) => (
+                  <TouchableOpacity
+                    key={c}
+                    style={[
+                      styles.colorCircle,
+                      { backgroundColor: c },
+                      selectedColor === c && styles.colorCircleActive,
+                    ]}
+                    onPress={() => setSelectedColor(c)}
+                  />
+                ))}
+              </View>
+
+              <TouchableOpacity
+                style={styles.submitButton}
+                onPress={handleCreateOrUpdateGoal}
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? (
+                  <ActivityIndicator color="#FFFFFF" size="small" />
+                ) : (
+                  <Text style={styles.submitButtonText}>Save Goal</Text>
+                )}
+              </TouchableOpacity>
+            </ScrollView>
+          </Animated.View>
+        </View>
+      </Modal>
 
       <CustomAlert
         visible={alertDialog.visible}
@@ -428,312 +534,15 @@ export default function GoalsScreen() {
   );
 }
 
-function AnimatedFormCard({ children, colors }: any) {
-  const formOpacity = useRef(new Animated.Value(0)).current;
-  const formTranslateY = useRef(new Animated.Value(-15)).current;
-
-  useEffect(() => {
-    Animated.parallel([
-      Animated.timing(formOpacity, {
-        toValue: 1,
-        duration: 300,
-        useNativeDriver: true,
-      }),
-      Animated.timing(formTranslateY, {
-        toValue: 0,
-        duration: 300,
-        useNativeDriver: true,
-      })
-    ]).start();
-  }, []);
-
-  return (
-    <Animated.View style={{ opacity: formOpacity, transform: [{ translateY: formTranslateY }] }}>
-      <View style={[styles.formCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-        {children}
-      </View>
-    </Animated.View>
-  );
-}
-
-function GoalCardItem({
-  goal,
-  index,
-  wallets,
-  user,
-  colors,
-  activeGoalIdForDeposit,
-  setActiveGoalIdForDeposit,
-  activeGoalIdForWithdraw,
-  setActiveGoalIdForWithdraw,
-  selectedWalletId,
-  setSelectedWalletId,
-  actionAmount,
-  setActionAmount,
-  actionError,
-  setActionError,
-  isActionSubmitting,
-  handleAddSavings,
-  handleWithdrawSavings,
-  handleStartEditGoal,
-  handleDeleteGoal,
-}: any) {
-  const cardFade = useRef(new Animated.Value(0)).current;
-  const cardSlide = useRef(new Animated.Value(25)).current;
-  const cardScale = useRef(new Animated.Value(1)).current;
-
-  useEffect(() => {
-    Animated.parallel([
-      Animated.timing(cardFade, {
-        toValue: 1,
-        duration: 500,
-        delay: index * 80,
-        useNativeDriver: true,
-      }),
-      Animated.timing(cardSlide, {
-        toValue: 0,
-        duration: 500,
-        delay: index * 80,
-        useNativeDriver: true,
-      })
-    ]).start();
-  }, []);
-
-  const animatePress = () => {
-    Animated.sequence([
-      Animated.timing(cardScale, {
-        toValue: 0.96,
-        duration: 80,
-        useNativeDriver: true,
-      }),
-      Animated.spring(cardScale, {
-        toValue: 1,
-        friction: 3,
-        tension: 40,
-        useNativeDriver: true,
-      })
-    ]).start();
-  };
-
-  const percent = Math.min(Math.round((goal.currentAmount / goal.targetAmount) * 100), 100);
-  const isDepositExpanded = activeGoalIdForDeposit === goal._id;
-  const isWithdrawExpanded = activeGoalIdForWithdraw === goal._id;
-
-  return (
-    <Animated.View style={{ opacity: cardFade, transform: [{ translateY: cardSlide }, { scale: cardScale }] }}>
-      <TouchableOpacity
-        activeOpacity={0.95}
-        onPress={animatePress}
-        style={[styles.goalCard, { backgroundColor: colors.card, borderColor: colors.border }]}
-      >
-        {/* Card Header Color Bar */}
-        <View style={[styles.goalColorBar, { backgroundColor: goal.color }]} />
-
-        <View style={styles.goalCardContent}>
-          <View style={styles.cardHeader}>
-            <View style={styles.headerInfo}>
-              <Text style={[styles.goalName, { color: colors.text }]}>{goal.name}</Text>
-              {goal.targetDate ? (
-                <Text style={[styles.goalDate, { color: colors.textSecondary }]}>
-                  Target: {new Date(goal.targetDate).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
-                </Text>
-              ) : null}
-            </View>
-
-            <View style={{ flexDirection: 'row', gap: 14 }}>
-              <TouchableOpacity onPress={() => handleStartEditGoal(goal)}>
-                <FontAwesome name="pencil" size={14} color={colors.textSecondary} />
-              </TouchableOpacity>
-              <TouchableOpacity onPress={() => handleDeleteGoal(goal)}>
-                <FontAwesome name="trash" size={14} color={colors.textSecondary} />
-              </TouchableOpacity>
-            </View>
-          </View>
-
-          {/* Progress Section */}
-          <View style={styles.progressSection}>
-            <View style={styles.progressTextRow}>
-              <Text style={[styles.progressValues, { color: colors.text }]}>
-                {formatCurrency(goal.currentAmount, user?.currency)} / {formatCurrency(goal.targetAmount, user?.currency)}
-              </Text>
-              <Text style={[styles.progressPercent, { color: goal.color }]}>{percent}%</Text>
-            </View>
-
-            <View style={[styles.progressBarBg, { backgroundColor: colors.inputBg }]}>
-              <View style={[styles.progressBarFill, { width: `${percent}%`, backgroundColor: goal.color }]} />
-            </View>
-          </View>
-
-          {/* Completed Badge */}
-          {goal.isCompleted ? (
-            <View style={styles.completedBadge}>
-              <FontAwesome name="check-circle" size={12} color="#10B981" />
-              <Text style={styles.completedBadgeText}>Completed</Text>
-            </View>
-          ) : null}
-
-          {/* Quick Actions Row */}
-          <View style={[styles.goalActionsRow, { borderTopColor: colors.border }]}>
-            <TouchableOpacity
-              style={[styles.goalActionBtn, { backgroundColor: 'rgba(16, 185, 129, 0.08)' }]}
-              onPress={() => {
-                setActionError('');
-                setActionAmount('');
-                setActiveGoalIdForWithdraw(null);
-                setActiveGoalIdForDeposit(isDepositExpanded ? null : goal._id);
-              }}
-            >
-              <FontAwesome name="plus" size={10} color="#10B981" />
-              <Text style={[styles.goalActionBtnText, { color: '#10B981' }]}> Contribute</Text>
-            </TouchableOpacity>
-
-            {goal.currentAmount > 0 ? (
-              <TouchableOpacity
-                style={[styles.goalActionBtn, { backgroundColor: 'rgba(239, 68, 68, 0.08)' }]}
-                onPress={() => {
-                  setActionError('');
-                  setActionAmount('');
-                  setActiveGoalIdForDeposit(null);
-                  setActiveGoalIdForWithdraw(isWithdrawExpanded ? null : goal._id);
-                }}
-              >
-                <FontAwesome name="minus" size={10} color="#EF4444" />
-                <Text style={[styles.goalActionBtnText, { color: '#EF4444' }]}> Withdraw</Text>
-              </TouchableOpacity>
-            ) : null}
-          </View>
-
-          {/* In-Card Deposit Action Form */}
-          {isDepositExpanded ? (
-            <View style={[styles.inlineActionArea, { borderTopColor: colors.border }]}>
-              <Text style={[styles.inlineActionTitle, { color: colors.text }]}>Contribute Savings</Text>
-              {actionError ? <Text style={styles.inlineErrorText}>{actionError}</Text> : null}
-
-              <Text style={[styles.inlineLabel, { color: colors.textSecondary }]}>Select Wallet</Text>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.walletHorizontalScroll}>
-                {wallets.map((w: any) => (
-                  <TouchableOpacity
-                    key={w._id}
-                    style={[
-                      styles.inlineWalletBubble,
-                      { backgroundColor: colors.inputBg, borderColor: colors.border },
-                      selectedWalletId === w._id && { backgroundColor: '#10B981', borderColor: '#10B981' },
-                    ]}
-                    onPress={() => setSelectedWalletId(w._id)}
-                  >
-                    <Text style={[styles.inlineWalletBubbleText, { color: colors.text }, selectedWalletId === w._id && { color: '#FFFFFF', fontWeight: 'bold' }]}>
-                      {w.name} ({formatCurrency(w.balance, w.currency)})
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-
-              <Text style={[styles.inlineLabel, { color: colors.textSecondary }]}>Amount</Text>
-              <TextInput
-                style={[styles.inlineInput, { backgroundColor: colors.inputBg, borderColor: colors.border, color: colors.text }]}
-                placeholder="0.00"
-                placeholderTextColor="#94A3B8"
-                keyboardType="numeric"
-                value={actionAmount}
-                onChangeText={setActionAmount}
-              />
-
-              <View style={styles.inlineActionsBtnRow}>
-                <TouchableOpacity
-                  style={[styles.inlineCancelBtn, { borderColor: colors.border }]}
-                  onPress={() => {
-                    setActiveGoalIdForDeposit(null);
-                    setActionAmount('');
-                  }}
-                >
-                  <Text style={[styles.inlineCancelText, { color: colors.textSecondary }]}>Cancel</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={styles.inlineSubmitBtn}
-                  onPress={() => handleAddSavings(goal._id)}
-                  disabled={isActionSubmitting}
-                >
-                  {isActionSubmitting ? (
-                    <ActivityIndicator size="small" color="#FFFFFF" />
-                  ) : (
-                    <Text style={styles.inlineSubmitText}>Confirm</Text>
-                  )}
-                </TouchableOpacity>
-              </View>
-            </View>
-          ) : null}
-
-          {/* In-Card Withdraw Action Form */}
-          {isWithdrawExpanded ? (
-            <View style={[styles.inlineActionArea, { borderTopColor: colors.border }]}>
-              <Text style={[styles.inlineActionTitle, { color: colors.text }]}>Withdraw Savings</Text>
-              {actionError ? <Text style={styles.inlineErrorText}>{actionError}</Text> : null}
-
-              <Text style={[styles.inlineLabel, { color: colors.textSecondary }]}>Refund to Wallet</Text>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.walletHorizontalScroll}>
-                {wallets.map((w: any) => (
-                  <TouchableOpacity
-                    key={w._id}
-                    style={[
-                      styles.inlineWalletBubble,
-                      { backgroundColor: colors.inputBg, borderColor: colors.border },
-                      selectedWalletId === w._id && { backgroundColor: '#EF4444', borderColor: '#EF4444' },
-                    ]}
-                    onPress={() => setSelectedWalletId(w._id)}
-                  >
-                    <Text style={[styles.inlineWalletBubbleText, { color: colors.text }, selectedWalletId === w._id && { color: '#FFFFFF', fontWeight: 'bold' }]}>
-                      {w.name} ({formatCurrency(w.balance, w.currency)})
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-
-              <Text style={[styles.inlineLabel, { color: colors.textSecondary }]}>Amount</Text>
-              <TextInput
-                style={[styles.inlineInput, { backgroundColor: colors.inputBg, borderColor: colors.border, color: colors.text }]}
-                placeholder="0.00"
-                placeholderTextColor="#94A3B8"
-                keyboardType="numeric"
-                value={actionAmount}
-                onChangeText={setActionAmount}
-              />
-
-              <View style={styles.inlineActionsBtnRow}>
-                <TouchableOpacity
-                  style={[styles.inlineCancelBtn, { borderColor: colors.border }]}
-                  onPress={() => {
-                    setActiveGoalIdForWithdraw(null);
-                    setActionAmount('');
-                  }}
-                >
-                  <Text style={[styles.inlineCancelText, { color: colors.textSecondary }]}>Cancel</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={[styles.inlineSubmitBtn, { backgroundColor: '#EF4444' }]}
-                  onPress={() => handleWithdrawSavings(goal._id)}
-                  disabled={isActionSubmitting}
-                >
-                  {isActionSubmitting ? (
-                    <ActivityIndicator size="small" color="#FFFFFF" />
-                  ) : (
-                    <Text style={styles.inlineSubmitText}>Withdraw</Text>
-                  )}
-                </TouchableOpacity>
-              </View>
-            </View>
-          ) : null}
-
-        </View>
-      </TouchableOpacity>
-    </Animated.View>
-  );
-}
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  headerTitle: {
+    fontSize: 22,
+    fontWeight: '700',
+    textAlign: 'center',
+    paddingVertical: 12,
   },
   loadingContainer: {
     flex: 1,
@@ -742,47 +551,211 @@ const styles = StyleSheet.create({
   },
   scrollContainer: {
     padding: 24,
-    paddingBottom: 110,
+    paddingBottom: 40,
   },
   headerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 24,
+    marginBottom: 20,
   },
   title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    fontFamily: 'System',
+    fontSize: 18,
+    fontWeight: '700',
   },
   addButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#10B981',
-    paddingVertical: 8,
-    paddingHorizontal: 14,
-    borderRadius: 12,
+    gap: 6,
   },
   addButtonText: {
-    color: '#FFFFFF',
-    fontSize: 13,
-    fontWeight: 'bold',
+    color: '#3B82F6',
+    fontWeight: '600',
+    fontSize: 14,
   },
-  formCard: {
-    borderRadius: 20,
-    padding: 20,
+  emptyContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 40,
+    borderRadius: 24,
     borderWidth: 1,
-    marginBottom: 24,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 2,
+    marginTop: 20,
   },
-  formTitle: {
+  emptyText: {
+    fontSize: 13,
+    fontWeight: '500',
+    marginTop: 12,
+  },
+  goalsList: {
+    gap: 16,
+  },
+  goalCard: {
+    borderRadius: 24,
+    borderWidth: 1,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.02,
+    shadowRadius: 12,
+    elevation: 3,
+  },
+  cardTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+  },
+  iconWrapper: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cardHeaderInfo: {
+    flex: 1,
+  },
+  goalName: {
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  goalSubtext: {
+    fontSize: 12,
+    fontWeight: '500',
+    marginTop: 2,
+  },
+  cardMiddleRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 16,
+  },
+  clockRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  clockText: {
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  badge: {
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 10,
+  },
+  badgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  progressBarContainer: {
+    height: 6,
+    position: 'relative',
+    marginTop: 14,
+    marginBottom: 12,
+  },
+  dashedTrack: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    height: 6,
+    borderRadius: 3,
+    borderWidth: 2,
+    borderStyle: 'dashed',
+  },
+  solidFillTrack: {
+    position: 'absolute',
+    left: 0,
+    height: 6,
+    borderRadius: 3,
+  },
+  progressThumb: {
+    position: 'absolute',
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    top: -4,
+    marginLeft: -7,
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 2,
+    elevation: 3,
+  },
+  cardBottomRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  savedAmount: {
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  targetAmount: {
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  paceAlert: {
+    borderRadius: 12,
+    padding: 10,
+    marginTop: 14,
+  },
+  paceAlertText: {
+    fontSize: 11,
+    lineHeight: 16,
+  },
+  modalOverlay: {
+    flex: 1,
+    justifyContent: 'flex-end',
+  },
+  modalBackdrop: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+  backdropBackground: {
+    flex: 1,
+    backgroundColor: '#000000',
+  },
+  bottomDrawer: {
+    borderTopLeftRadius: 30,
+    borderTopRightRadius: 30,
+    paddingTop: 10,
+    paddingHorizontal: 24,
+    paddingBottom: 40,
+    maxHeight: '80%',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: -10 },
+    shadowOpacity: 0.08,
+    shadowRadius: 20,
+    elevation: 10,
+  },
+  dragIndicator: {
+    width: 36,
+    height: 5,
+    borderRadius: 2.5,
+    alignSelf: 'center',
+    marginBottom: 20,
+  },
+  drawerHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  drawerTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 16,
+    fontWeight: '700',
+  },
+  drawerCancelText: {
+    color: '#64748B',
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  drawerForm: {
+    paddingBottom: 20,
   },
   errorText: {
     color: '#EF4444',
@@ -790,235 +763,56 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginBottom: 16,
     backgroundColor: 'rgba(239, 68, 68, 0.08)',
-    padding: 10,
-    borderRadius: 8,
+    padding: 12,
+    borderRadius: 10,
   },
   inputGroup: {
-    marginBottom: 16,
+    marginBottom: 18,
   },
   label: {
-    fontSize: 13,
-    fontWeight: '600',
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.5,
     marginBottom: 8,
   },
   input: {
-    borderWidth: 1,
-    borderRadius: 12,
     height: 48,
+    borderRadius: 12,
+    borderWidth: 1,
     paddingHorizontal: 16,
     fontSize: 14,
   },
   colorGrid: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginVertical: 12,
+    gap: 12,
+    marginBottom: 24,
   },
   colorCircle: {
     width: 38,
     height: 38,
     borderRadius: 19,
-    borderWidth: 3,
+    borderWidth: 2,
     borderColor: 'transparent',
   },
   colorCircleActive: {
-    borderColor: '#FFFFFF',
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 3,
+    borderColor: '#3B82F6',
+    transform: [{ scale: 1.1 }],
   },
   submitButton: {
-    backgroundColor: '#10B981',
-    height: 48,
+    backgroundColor: '#1E293B',
+    height: 52,
     borderRadius: 14,
-    justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 16,
+    justifyContent: 'center',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
   },
   submitButtonText: {
     color: '#FFFFFF',
     fontSize: 15,
-    fontWeight: 'bold',
-  },
-  goalsList: {
-    gap: 16,
-  },
-  goalCard: {
-    borderRadius: 20,
-    borderWidth: 1,
-    overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.03,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  goalColorBar: {
-    height: 6,
-    width: '100%',
-  },
-  goalCardContent: {
-    padding: 18,
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-  },
-  headerInfo: {
-    flex: 1,
-  },
-  goalName: {
-    fontSize: 17,
     fontWeight: '700',
-  },
-  goalDate: {
-    fontSize: 12,
-    marginTop: 4,
-  },
-  progressSection: {
-    marginVertical: 14,
-  },
-  progressTextRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 6,
-  },
-  progressValues: {
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  progressPercent: {
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  progressBarBg: {
-    height: 8,
-    borderRadius: 4,
-    width: '100%',
-  },
-  progressBarFill: {
-    height: '100%',
-    borderRadius: 4,
-  },
-  completedBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(16, 185, 129, 0.08)',
-    alignSelf: 'flex-start',
-    paddingVertical: 4,
-    paddingHorizontal: 8,
-    borderRadius: 8,
-    marginBottom: 12,
-    gap: 4,
-  },
-  completedBadgeText: {
-    color: '#059669',
-    fontSize: 11,
-    fontWeight: 'bold',
-  },
-  goalActionsRow: {
-    flexDirection: 'row',
-    borderTopWidth: 1,
-    paddingTop: 14,
-    gap: 12,
-  },
-  goalActionBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 10,
-    gap: 6,
-  },
-  goalActionBtnText: {
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  inlineActionArea: {
-    borderTopWidth: 1,
-    marginTop: 14,
-    paddingTop: 14,
-  },
-  inlineActionTitle: {
-    fontSize: 14,
-    fontWeight: '700',
-    marginBottom: 10,
-  },
-  inlineErrorText: {
-    color: '#EF4444',
-    fontSize: 12,
-    fontWeight: '600',
-    marginBottom: 10,
-    backgroundColor: 'rgba(239, 68, 68, 0.05)',
-    padding: 8,
-    borderRadius: 6,
-  },
-  inlineLabel: {
-    fontSize: 11,
-    fontWeight: '600',
-    marginBottom: 6,
-  },
-  walletHorizontalScroll: {
-    gap: 8,
-    paddingBottom: 10,
-  },
-  inlineWalletBubble: {
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 10,
-    borderWidth: 1,
-  },
-  inlineWalletBubbleText: {
-    fontSize: 12,
-  },
-  inlineInput: {
-    borderWidth: 1,
-    borderRadius: 10,
-    height: 40,
-    paddingHorizontal: 12,
-    fontSize: 13,
-    marginBottom: 12,
-  },
-  inlineActionsBtnRow: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    gap: 10,
-  },
-  inlineCancelBtn: {
-    borderWidth: 1,
-    borderRadius: 10,
-    paddingVertical: 8,
-    paddingHorizontal: 14,
-  },
-  inlineCancelText: {
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  inlineSubmitBtn: {
-    backgroundColor: '#10B981',
-    borderRadius: 10,
-    paddingVertical: 8,
-    paddingHorizontal: 14,
-    justifyContent: 'center',
-    alignItems: 'center',
-    minWidth: 70,
-  },
-  inlineSubmitText: {
-    color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: 'bold',
-  },
-  emptyContainer: {
-    borderRadius: 20,
-    padding: 40,
-    alignItems: 'center',
-    borderWidth: 1,
-    marginTop: 20,
-  },
-  emptyText: {
-    fontSize: 14,
-    marginTop: 12,
   },
 });

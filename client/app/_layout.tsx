@@ -174,6 +174,7 @@ function RootLayoutNav() {
         <Stack.Screen name="categories" options={{ headerShown: false }} />
         <Stack.Screen name="friend-ledger" options={{ headerShown: false }} />
         <Stack.Screen name="modal" options={{ presentation: 'modal', headerShown: false }} />
+        <Stack.Screen name="goal-detail" options={{ headerShown: false }} />
       </Stack>
     </View>
   );
