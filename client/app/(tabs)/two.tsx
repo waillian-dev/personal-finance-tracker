@@ -31,6 +31,8 @@ import {
   Bag,
   Widget,
   AddCircle,
+  ArrowLeftDown,
+  ArrowRightUp,
 } from '@solar-icons/react-native/Bold';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -89,8 +91,8 @@ function WalletCardItem({
   const limit = wallet.creditLimit || 0;
   const remainingCredit = limit + Number(wallet.balance);
 
-  const cardBg = isDark ? '#1E293B' : '#FFFFFF';
-  const footerBg = isDark ? '#0F172A' : '#1E293B';
+  const cardBg = wallet.color || '#8B5CF6';
+  const footerBg = 'rgba(0, 0, 0, 0.2)'; // Translucent black strip for premium look
 
   return (
     <Animated.View style={{ transform: [{ scale: cardScale }] }}>
@@ -101,31 +103,31 @@ function WalletCardItem({
           styles.walletCard,
           {
             backgroundColor: cardBg,
-            borderColor: isActive ? '#8B5CF6' : colors.border,
-            borderWidth: isActive ? 2.5 : 1,
+            borderColor: isActive ? '#FFFFFF' : 'rgba(255, 255, 255, 0.1)',
+            borderWidth: isActive ? 3 : 1,
           },
         ]}
       >
         {/* Card Top */}
         <View style={styles.cardTop}>
           <View>
-            <Text style={[styles.cardTotalLabel, { color: isDark ? '#94A3B8' : '#64748B' }]}>
+            <Text style={[styles.cardTotalLabel, { color: 'rgba(255, 255, 255, 0.8)' }]}>
               {isCreditCard ? 'Available Credit' : 'Total Balance'}
             </Text>
-            <Text style={[styles.cardBalanceText, { color: isDark ? '#FFFFFF' : '#0F172A' }]}>
+            <Text style={[styles.cardBalanceText, { color: '#FFFFFF' }]}>
               {isCreditCard 
                 ? formatCurrency(remainingCredit, wallet.currency) 
                 : formatCurrency(wallet.balance, wallet.currency)}
             </Text>
           </View>
           <View style={styles.logoContainer}>
-            <Text style={[styles.logoText, { color: isDark ? '#94A3B8' : '#94A3B8' }]}>LOGO</Text>
+            <Text style={[styles.logoText, { color: 'rgba(255, 255, 255, 0.8)' }]}>LOGO</Text>
           </View>
         </View>
 
         {/* Card Middle */}
         <View style={styles.cardMiddle}>
-          <Text style={[styles.cardNumberText, { color: isDark ? '#E2E8F0' : '#475569' }]}>
+          <Text style={[styles.cardNumberText, { color: 'rgba(255, 255, 255, 0.95)' }]}>
             {cardNumber}
           </Text>
         </View>
@@ -133,7 +135,7 @@ function WalletCardItem({
         {/* Card Bottom Strip */}
         <View style={[styles.cardFooterStrip, { backgroundColor: footerBg }]}>
           <View>
-            <Text style={styles.footerLabel}>Name</Text>
+            <Text style={[styles.footerLabel, { color: 'rgba(255, 255, 255, 0.65)' }]}>Name</Text>
             <Text style={styles.footerName}>{wallet.name}</Text>
           </View>
           <View style={styles.footerActions}>
@@ -384,51 +386,27 @@ export default function WalletsScreen() {
     return <Widget size={18} color="#8B5CF6" />;
   };
 
-  // Compute category split breakdown of expenses for this month for pie chart KPI
-  const getWalletKPIBreakdown = () => {
-    const categoryTotals: { [categoryName: string]: number } = {};
-    let totalExpense = 0;
-
+  const getWalletMonthlyStatus = () => {
+    let income = 0;
+    let expense = 0;
     const currentMonthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
     
-    // Filter wallet transactions belonging to the current month that are expenses
-    const monthlyExpenses = walletTransactions.filter(t => {
+    walletTransactions.forEach(t => {
       const tDate = new Date(t.date);
-      return tDate >= currentMonthStart && t.type === 'expense';
+      if (tDate >= currentMonthStart) {
+        if (t.type === 'income') {
+          income += Number(t.amount);
+        } else if (t.type === 'expense') {
+          expense += Number(t.amount);
+        }
+      }
     });
 
-    monthlyExpenses.forEach(t => {
-      const catName = t.categoryId?.name || 'Other';
-      categoryTotals[catName] = (categoryTotals[catName] || 0) + Number(t.amount);
-      totalExpense += Number(t.amount);
-    });
-
-    const colorsList = ['#3B82F6', '#8B5CF6', '#F59E0B', '#EF4444', '#EC4899', '#10B981'];
-    let accumulatedPercent = 0;
-
-    const slices = Object.entries(categoryTotals).map(([name, amount], index) => {
-      const percent = totalExpense > 0 ? (amount / totalExpense) : 0;
-      const strokeOffset = 2 * Math.PI * 35 * (1 - percent);
-      const strokeDasharray = `${2 * Math.PI * 35}`;
-      const rotation = accumulatedPercent * 360;
-      accumulatedPercent += percent;
-      const color = colorsList[index % colorsList.length];
-
-      return {
-        name,
-        amount,
-        percent,
-        strokeOffset,
-        strokeDasharray,
-        rotation,
-        color,
-      };
-    });
-
-    return { slices, totalExpense };
+    return { income, expense };
   };
 
-  const { slices: kpiSlices, totalExpense: kpiTotalExpense } = getWalletKPIBreakdown();
+  const monthlyStatus = getWalletMonthlyStatus();
+  const currentWallet = wallets.find(w => w._id === selectedWalletId);
 
   if (isLoading) {
     return (
@@ -477,78 +455,39 @@ export default function WalletsScreen() {
           ))}
         </ScrollView>
 
-        {/* KPI Monthly Performance Pie Chart Section */}
+        {/* KPI Monthly Status Section (Income vs Expense) */}
         {selectedWalletId && (
-          <View style={styles.kpiContainer}>
-            <Text style={[styles.kpiSectionTitle, { color: colors.text }]}>Monthly Wallet Performance</Text>
-            <View style={[styles.kpiCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-              {kpiTotalExpense === 0 ? (
-                <View style={styles.kpiEmptyContainer}>
-                  <Svg height="90" width="90" viewBox="0 0 100 100">
-                    <Circle
-                      cx="50"
-                      cy="50"
-                      r="35"
-                      fill="transparent"
-                      stroke={isDark ? '#334155' : '#E2E8F0'}
-                      strokeWidth="10"
-                    />
-                  </Svg>
-                  <Text style={[styles.kpiEmptyText, { color: colors.textSecondary }]}>
-                    No expenses logged this month
+          <View style={styles.statusSectionContainer}>
+            <Text style={[styles.statusSectionTitle, { color: colors.text }]}>Monthly Status</Text>
+            <View style={[styles.statusCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+              {/* Income Block */}
+              <View style={styles.statusColumn}>
+                <View style={[styles.statusIconWrapper, { backgroundColor: 'rgba(16, 185, 129, 0.1)' }]}>
+                  <ArrowLeftDown size={18} color="#10B981" />
+                </View>
+                <View style={styles.statusInfo}>
+                  <Text style={[styles.statusLabel, { color: colors.textSecondary }]}>Income</Text>
+                  <Text style={[styles.statusValue, { color: '#10B981' }]}>
+                    {formatCurrency(monthlyStatus.income, currentWallet?.currency)}
                   </Text>
                 </View>
-              ) : (
-                <View style={styles.kpiRow}>
-                  {/* SVG Pie Chart */}
-                  <View style={styles.chartWrapper}>
-                    <Svg height="100" width="100" viewBox="0 0 100 100">
-                      {kpiSlices.map((slice, index) => (
-                        <Circle
-                          key={index}
-                          cx="50"
-                          cy="50"
-                          r="35"
-                          fill="transparent"
-                          stroke={slice.color}
-                          strokeWidth="11"
-                          strokeDasharray={slice.strokeDasharray}
-                          strokeDashoffset={slice.strokeOffset}
-                          transform={`rotate(${slice.rotation - 90} 50 50)`}
-                        />
-                      ))}
-                    </Svg>
-                    <View style={styles.chartCenterTextContainer}>
-                      <Text style={[styles.chartCenterLabel, { color: colors.textSecondary }]}>Spent</Text>
-                      <Text style={[styles.chartCenterValue, { color: colors.text }]} numberOfLines={1}>
-                        {formatCurrency(kpiTotalExpense, user?.currency)}
-                      </Text>
-                    </View>
-                  </View>
+              </View>
 
-                  {/* Legend Category Split */}
-                  <View style={styles.legendContainer}>
-                    {kpiSlices.slice(0, 3).map((slice, idx) => (
-                      <View key={idx} style={styles.legendRow}>
-                        <View style={[styles.legendDot, { backgroundColor: slice.color }]} />
-                        <View style={styles.legendTextWrapper}>
-                          <Text style={[styles.legendName, { color: colors.text }]} numberOfLines={1}>
-                            {slice.name}
-                          </Text>
-                          <Text style={[styles.legendPercent, { color: colors.textSecondary }]}>
-                            {Math.round(slice.percent * 100)}% ({formatCurrency(slice.amount, user?.currency)})
-                          </Text>
-                        </View>
-                      </View>
-                    ))}
-                    {kpiSlices.length > 3 && (
-                      <Text style={[styles.moreSlicesText, { color: '#8B5CF6' }]}>
-                        + {kpiSlices.length - 3} more categories
-                      </Text>
-                    )}
-                  </View>
+              {/* Middle vertical divider */}
+              <View style={[styles.statusDivider, { backgroundColor: colors.border }]} />
+
+              {/* Expense Block */}
+              <View style={styles.statusColumn}>
+                <View style={[styles.statusIconWrapper, { backgroundColor: 'rgba(239, 68, 68, 0.1)' }]}>
+                  <ArrowRightUp size={18} color="#EF4444" />
                 </View>
-              )}
+                <View style={styles.statusInfo}>
+                  <Text style={[styles.statusLabel, { color: colors.textSecondary }]}>Expense</Text>
+                  <Text style={[styles.statusValue, { color: '#EF4444' }]}>
+                    {formatCurrency(monthlyStatus.expense, currentWallet?.currency)}
+                  </Text>
+                </View>
+              </View>
             </View>
           </View>
         )}
@@ -866,88 +805,53 @@ const styles = StyleSheet.create({
   footerActionBtn: {
     padding: 6,
   },
-  kpiContainer: {
-    paddingHorizontal: 24,
-    marginBottom: 16,
+  statusSectionContainer: {
+    marginHorizontal: 24,
+    marginBottom: 20,
   },
-  kpiSectionTitle: {
-    fontSize: 16,
+  statusSectionTitle: {
+    fontSize: 15,
     fontWeight: '700',
     marginBottom: 12,
   },
-  kpiCard: {
+  statusCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-around',
     borderRadius: 20,
-    padding: 16,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
     borderWidth: 1,
   },
-  kpiEmptyContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 10,
-  },
-  kpiEmptyText: {
-    fontSize: 13,
-    fontWeight: '500',
-    marginTop: 10,
-  },
-  kpiRow: {
+  statusColumn: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    gap: 10,
+    paddingHorizontal: 6,
   },
-  chartWrapper: {
-    width: 100,
-    height: 100,
-    justifyContent: 'center',
-    alignItems: 'center',
-    position: 'relative',
-  },
-  chartCenterTextContainer: {
-    position: 'absolute',
+  statusIconWrapper: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
-    width: 60,
   },
-  chartCenterLabel: {
-    fontSize: 9,
+  statusInfo: {
+    flex: 1,
+  },
+  statusLabel: {
+    fontSize: 10,
     fontWeight: '600',
   },
-  chartCenterValue: {
-    fontSize: 11,
+  statusValue: {
+    fontSize: 14,
     fontWeight: '700',
     marginTop: 2,
-    textAlign: 'center',
   },
-  legendContainer: {
-    flex: 1,
-    marginLeft: 20,
-    gap: 10,
-  },
-  legendRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  legendDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-  },
-  legendTextWrapper: {
-    flex: 1,
-  },
-  legendName: {
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  legendPercent: {
-    fontSize: 10,
-    marginTop: 1,
-  },
-  moreSlicesText: {
-    fontSize: 10,
-    fontWeight: '600',
-    marginLeft: 16,
+  statusDivider: {
+    width: 1,
+    height: '70%',
   },
   transactionsHeaderRow: {
     flexDirection: 'row',

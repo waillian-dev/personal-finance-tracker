@@ -9,8 +9,10 @@ import {
   ScrollView,
   Dimensions,
   SafeAreaView,
+  Modal,
+  FlatList,
 } from 'react-native';
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useRouter, useLocalSearchParams, Stack } from 'expo-router';
 import { FontAwesome } from '@expo/vector-icons';
 import api from '../services/api';
 import { Wallet, Category } from '../types';
@@ -23,8 +25,8 @@ import * as SolarBold from '@solar-icons/react-native/Bold';
 import {
   AltArrowLeft,
   AltArrowRight,
+  AltArrowDown,
   Notes,
-  Wallet as SolarWallet,
 } from '@solar-icons/react-native/Bold';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -46,7 +48,15 @@ export default function AddTransactionModal() {
   const [selectedCategoryId, setSelectedCategoryId] = useState('');
   const [formError, setFormError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // Date Picker States
   const [transactionDate, setTransactionDate] = useState(new Date());
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [calendarMonth, setCalendarMonth] = useState(new Date());
+
+  // Dropdown Picker States
+  const [showSourceDropdown, setShowSourceDropdown] = useState(false);
+  const [showDestDropdown, setShowDestDropdown] = useState(false);
 
   // Friend Split States
   const [isSplitWithFriend, setIsSplitWithFriend] = useState(false);
@@ -107,6 +117,7 @@ export default function AddTransactionModal() {
             setSelectedCategoryId(tx.categoryId?._id || tx.categoryId || '');
             if (tx.date) {
               setTransactionDate(new Date(tx.date));
+              setCalendarMonth(new Date(tx.date));
             }
             if (tx.type === 'transfer') {
               setSelectedDestWalletId(tx.destinationWalletId?._id || tx.destinationWalletId || '');
@@ -225,6 +236,34 @@ export default function AddTransactionModal() {
     return <SolarBold.Widget size={size} color={iconColor} />;
   };
 
+  // Calendar helpers
+  const getDaysInMonth = (date: Date) => {
+    const year = date.getFullYear();
+    const month = date.getMonth();
+    const firstDayIndex = new Date(year, month, 1).getDay();
+    const totalDays = new Date(year, month + 1, 0).getDate();
+
+    const days = [];
+    // Pad initial week days empty space
+    for (let i = 0; i < firstDayIndex; i++) {
+      days.push(null);
+    }
+    for (let i = 1; i <= totalDays; i++) {
+      days.push(new Date(year, month, i));
+    }
+    return days;
+  };
+
+  const handleMonthChange = (direction: 'prev' | 'next') => {
+    const newMonth = new Date(calendarMonth);
+    if (direction === 'prev') {
+      newMonth.setMonth(newMonth.getMonth() - 1);
+    } else {
+      newMonth.setMonth(newMonth.getMonth() + 1);
+    }
+    setCalendarMonth(newMonth);
+  };
+
   if (isLoading) {
     return (
       <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
@@ -235,9 +274,14 @@ export default function AddTransactionModal() {
 
   const currencySymbol = user?.currency === 'MMK' ? 'Ks' : '$';
   const displayCategories = categories.filter((c) => c.type === (type === 'transfer' ? 'expense' : type));
+  const currentWallet = wallets.find(w => w._id === selectedWalletId);
+  const destWallet = wallets.find(w => w._id === selectedDestWalletId);
 
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
+      {/* Remove Expo Stack Header Duplicate */}
+      <Stack.Screen options={{ headerShown: false }} />
+
       {/* Header */}
       <View style={[styles.header, { borderBottomColor: colors.border }]}>
         <TouchableOpacity onPress={() => router.back()}>
@@ -299,7 +343,6 @@ export default function AddTransactionModal() {
             />
           </View>
           
-          {/* Description line with dotted bottom border */}
           <TextInput
             style={[styles.descDottedInput, { color: colors.text, borderBottomColor: isDark ? '#475569' : '#3B82F6' }]}
             value={description}
@@ -310,7 +353,7 @@ export default function AddTransactionModal() {
           />
         </View>
 
-        {/* Date Row Card */}
+        {/* Date Selector Row -> Opens Custom Calendar Modal */}
         <View style={[styles.dateCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <View style={styles.dateLeft}>
             <Notes size={20} color={colors.textSecondary} />
@@ -318,72 +361,54 @@ export default function AddTransactionModal() {
           </View>
           <TouchableOpacity
             style={styles.dateRight}
-            onPress={() => {
-              // Toggle simple date picker or toggle day offsets for prototype convenience
-              const tomorrow = new Date(transactionDate);
-              tomorrow.setDate(tomorrow.getDate() + 1);
-              // if it's tomorrow, reset to today
-              if (tomorrow.getTime() > new Date().getTime() + 86400000) {
-                setTransactionDate(new Date());
-              } else {
-                setTransactionDate(tomorrow);
-              }
-            }}
+            onPress={() => setShowDatePicker(true)}
           >
             <Text style={[styles.dateValue, { color: colors.textSecondary }]}>
-              {transactionDate.toDateString() === new Date().toDateString() ? 'Today' : transactionDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+              {transactionDate.toDateString() === new Date().toDateString() ? 'Today' : transactionDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
             </Text>
             <AltArrowRight size={18} color={colors.textSecondary} />
           </TouchableOpacity>
         </View>
 
-        {/* Source Wallet Selection Card */}
-        <View style={[styles.sectionContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
+        {/* Source Wallet Dropdown */}
+        <View style={[styles.dropdownSection, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <Text style={[styles.selectLabel, { color: colors.textSecondary }]}>
             {type === 'transfer' ? 'FROM WALLET' : 'SELECT WALLET'}
           </Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalScroll}>
-            {wallets.map((w) => (
-              <TouchableOpacity
-                key={w._id}
-                style={[
-                  styles.walletChip,
-                  { backgroundColor: colors.inputBg, borderColor: colors.border },
-                  selectedWalletId === w._id && [styles.walletChipActive, { borderColor: w.color || '#2563EB' }],
-                ]}
-                onPress={() => setSelectedWalletId(w._id)}
-              >
-                <View style={[styles.walletColorIndicator, { backgroundColor: w.color || '#94A3B8' }]} />
-                <Text style={[styles.walletChipText, { color: colors.text }]}>
-                  {w.name} ({formatCurrency(w.balance, w.currency)})
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
+          <TouchableOpacity
+            style={[styles.dropdownSelectBox, { backgroundColor: colors.inputBg, borderColor: colors.border }]}
+            onPress={() => setShowSourceDropdown(true)}
+          >
+            <View style={styles.dropdownSelectLeft}>
+              {currentWallet && (
+                <View style={[styles.walletColorIndicator, { backgroundColor: currentWallet.color || '#94A3B8' }]} />
+              )}
+              <Text style={[styles.dropdownSelectText, { color: colors.text }]}>
+                {currentWallet ? `${currentWallet.name} (${formatCurrency(currentWallet.balance, currentWallet.currency)})` : 'Select Wallet'}
+              </Text>
+            </View>
+            <AltArrowDown size={18} color={colors.textSecondary} />
+          </TouchableOpacity>
         </View>
 
-        {/* Destination Wallet Card (Only for transfers) */}
+        {/* Destination Wallet Dropdown (Only for Transfers) */}
         {type === 'transfer' && (
-          <View style={[styles.sectionContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <View style={[styles.dropdownSection, { backgroundColor: colors.card, borderColor: colors.border }]}>
             <Text style={[styles.selectLabel, { color: colors.textSecondary }]}>TO WALLET</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalScroll}>
-              {wallets.map((w) => (
-                <TouchableOpacity
-                  key={w._id}
-                  style={[
-                    styles.walletChip,
-                    { backgroundColor: colors.inputBg, borderColor: colors.border },
-                    selectedDestWalletId === w._id && [styles.walletChipActive, { borderColor: w.color || '#2563EB' }],
-                  ]}
-                  onPress={() => setSelectedDestWalletId(w._id)}
-                >
-                  <View style={[styles.walletColorIndicator, { backgroundColor: w.color || '#94A3B8' }]} />
-                  <Text style={[styles.walletChipText, { color: colors.text }]}>
-                    {w.name} ({formatCurrency(w.balance, w.currency)})
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
+            <TouchableOpacity
+              style={[styles.dropdownSelectBox, { backgroundColor: colors.inputBg, borderColor: colors.border }]}
+              onPress={() => setShowDestDropdown(true)}
+            >
+              <View style={styles.dropdownSelectLeft}>
+                {destWallet && (
+                  <View style={[styles.walletColorIndicator, { backgroundColor: destWallet.color || '#94A3B8' }]} />
+                )}
+                <Text style={[styles.dropdownSelectText, { color: colors.text }]}>
+                  {destWallet ? `${destWallet.name} (${formatCurrency(destWallet.balance, destWallet.currency)})` : 'Select Destination Wallet'}
+                </Text>
+              </View>
+              <AltArrowDown size={18} color={colors.textSecondary} />
+            </TouchableOpacity>
           </View>
         )}
 
@@ -392,7 +417,7 @@ export default function AddTransactionModal() {
           <View style={styles.categorySection}>
             <Text style={[styles.selectLabel, { color: colors.textSecondary }]}>SELECT CATEGORY</Text>
             <View style={styles.categoryGrid}>
-              {displayCategories.map((c) => {
+              {displayCategories.slice(0, 7).map((c) => {
                 const isActive = selectedCategoryId === c._id;
                 return (
                   <TouchableOpacity
@@ -414,7 +439,6 @@ export default function AddTransactionModal() {
                 );
               })}
               
-              {/* More / Manage shortcut */}
               <TouchableOpacity
                 style={[styles.categoryCard, { backgroundColor: colors.card, borderColor: colors.border }]}
                 onPress={() => router.push('/categories')}
@@ -513,6 +537,155 @@ export default function AddTransactionModal() {
           )}
         </TouchableOpacity>
       </ScrollView>
+
+      {/* 1. Custom Calendar Date Picker Modal */}
+      <Modal
+        visible={showDatePicker}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowDatePicker(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.calendarCard, { backgroundColor: colors.card }]}>
+            {/* Calendar Header */}
+            <View style={styles.calendarHeader}>
+              <TouchableOpacity onPress={() => handleMonthChange('prev')}>
+                <AltArrowLeft size={22} color={colors.text} />
+              </TouchableOpacity>
+              <Text style={[styles.calendarMonthName, { color: colors.text }]}>
+                {calendarMonth.toLocaleString(undefined, { month: 'long', year: 'numeric' })}
+              </Text>
+              <TouchableOpacity onPress={() => handleMonthChange('next')}>
+                <AltArrowRight size={22} color={colors.text} />
+              </TouchableOpacity>
+            </View>
+
+            {/* Week headers */}
+            <View style={styles.weekHeadersRow}>
+              {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map((w, index) => (
+                <Text key={index} style={[styles.weekLabel, { color: colors.textSecondary }]}>
+                  {w}
+                </Text>
+              ))}
+            </View>
+
+            {/* Days grid */}
+            <View style={styles.daysGrid}>
+              {getDaysInMonth(calendarMonth).map((d, index) => {
+                if (!d) {
+                  return <View key={index} style={styles.dayCellEmpty} />;
+                }
+                const isSelected = d.toDateString() === transactionDate.toDateString();
+                const isToday = d.toDateString() === new Date().toDateString();
+                return (
+                  <TouchableOpacity
+                    key={index}
+                    style={[
+                      styles.dayCellButton,
+                      isSelected && styles.dayCellActive,
+                      isToday && !isSelected && { borderColor: '#3B82F6', borderWidth: 1 }
+                    ]}
+                    onPress={() => {
+                      setTransactionDate(d);
+                      setShowDatePicker(false);
+                    }}
+                  >
+                    <Text
+                      style={[
+                        styles.dayText,
+                        { color: colors.text },
+                        isSelected && { color: '#FFFFFF', fontWeight: 'bold' }
+                      ]}
+                    >
+                      {d.getDate()}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+
+            {/* Cancel Calendar Button */}
+            <TouchableOpacity
+              style={[styles.calendarCancelBtn, { backgroundColor: colors.inputBg }]}
+              onPress={() => setShowDatePicker(false)}
+            >
+              <Text style={{ color: colors.text, fontWeight: '700' }}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* 2. Source Wallet Dropdown Modal */}
+      <Modal
+        visible={showSourceDropdown}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowSourceDropdown(false)}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setShowSourceDropdown(false)}
+        >
+          <View style={[styles.dropdownOptionsCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <Text style={[styles.dropdownHeading, { color: colors.textSecondary }]}>SELECT SOURCE WALLET</Text>
+            <FlatList
+              data={wallets}
+              keyExtractor={(item) => item._id}
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  style={[styles.dropdownItem, { borderBottomColor: colors.border }]}
+                  onPress={() => {
+                    setSelectedWalletId(item._id);
+                    setShowSourceDropdown(false);
+                  }}
+                >
+                  <View style={[styles.walletColorIndicator, { backgroundColor: item.color || '#94A3B8' }]} />
+                  <Text style={[styles.dropdownItemText, { color: colors.text }, selectedWalletId === item._id && { fontWeight: '700' }]}>
+                    {item.name} ({formatCurrency(item.balance, item.currency)})
+                  </Text>
+                </TouchableOpacity>
+              )}
+            />
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* 3. Destination Wallet Dropdown Modal */}
+      <Modal
+        visible={showDestDropdown}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowDestDropdown(false)}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setShowDestDropdown(false)}
+        >
+          <View style={[styles.dropdownOptionsCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <Text style={[styles.dropdownHeading, { color: colors.textSecondary }]}>SELECT DESTINATION WALLET</Text>
+            <FlatList
+              data={wallets}
+              keyExtractor={(item) => item._id}
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  style={[styles.dropdownItem, { borderBottomColor: colors.border }]}
+                  onPress={() => {
+                    setSelectedDestWalletId(item._id);
+                    setShowDestDropdown(false);
+                  }}
+                >
+                  <View style={[styles.walletColorIndicator, { backgroundColor: item.color || '#94A3B8' }]} />
+                  <Text style={[styles.dropdownItemText, { color: colors.text }, selectedDestWalletId === item._id && { fontWeight: '700' }]}>
+                    {item.name} ({formatCurrency(item.balance, item.currency)})
+                  </Text>
+                </TouchableOpacity>
+              )}
+            />
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -645,7 +818,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '500',
   },
-  sectionContainer: {
+  dropdownSection: {
     borderRadius: 16,
     borderWidth: 1,
     padding: 16,
@@ -657,29 +830,27 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
     marginBottom: 12,
   },
-  horizontalScroll: {
-    gap: 8,
-  },
-  walletChip: {
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 10,
+  dropdownSelectBox: {
+    height: 48,
+    borderRadius: 12,
     borderWidth: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
   },
-  walletChipActive: {
-    borderWidth: 2,
-    backgroundColor: 'rgba(37, 99, 235, 0.05)',
+  dropdownSelectLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
   },
   walletColorIndicator: {
     width: 8,
     height: 8,
     borderRadius: 4,
   },
-  walletChipText: {
-    fontSize: 12,
+  dropdownSelectText: {
+    fontSize: 14,
     fontWeight: '600',
   },
   categorySection: {
@@ -817,5 +988,104 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontWeight: 'bold',
     fontSize: 16,
+  },
+  modalOverlay: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    padding: 24,
+  },
+  calendarCard: {
+    width: '100%',
+    borderRadius: 24,
+    padding: 20,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.1,
+    shadowRadius: 20,
+    elevation: 5,
+  },
+  calendarHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  calendarMonthName: {
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  weekHeadersRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginBottom: 10,
+  },
+  weekLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    width: 32,
+    textAlign: 'center',
+  },
+  daysGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-around',
+  },
+  dayCellEmpty: {
+    width: 32,
+    height: 32,
+    marginVertical: 4,
+  },
+  dayCellButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginVertical: 4,
+  },
+  dayCellActive: {
+    backgroundColor: '#3B82F6',
+  },
+  dayText: {
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  calendarCancelBtn: {
+    height: 48,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 20,
+  },
+  dropdownOptionsCard: {
+    width: '100%',
+    maxHeight: 280,
+    borderRadius: 20,
+    borderWidth: 1,
+    padding: 20,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.1,
+    shadowRadius: 20,
+    elevation: 5,
+  },
+  dropdownHeading: {
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+    marginBottom: 12,
+  },
+  dropdownItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+  },
+  dropdownItemText: {
+    fontSize: 14,
+    fontWeight: '500',
   },
 });
