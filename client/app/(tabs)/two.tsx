@@ -21,6 +21,7 @@ import { formatCurrency } from '../../utils/currency';
 import CustomAlert from '../../components/CustomAlert';
 import { useThemeColors } from '../../hooks/useThemeColors';
 import { useRouter } from 'expo-router';
+import Svg, { Circle } from 'react-native-svg';
 
 // Solar Icons imports
 import {
@@ -83,6 +84,10 @@ function WalletCardItem({
   const lastFour = idStr.substring(idStr.length - 4);
   const cardNumber = `1234  ••••  ••••  ${lastFour}`;
 
+  const isCreditCard = wallet.type === 'credit_card';
+  const limit = wallet.creditLimit || 0;
+  const remainingCredit = limit + Number(wallet.balance);
+
   const cardBg = isDark ? '#1E293B' : '#FFFFFF';
   const footerBg = isDark ? '#0F172A' : '#1E293B';
 
@@ -103,9 +108,13 @@ function WalletCardItem({
         {/* Card Top */}
         <View style={styles.cardTop}>
           <View>
-            <Text style={[styles.cardTotalLabel, { color: isDark ? '#94A3B8' : '#64748B' }]}>Total Balance</Text>
+            <Text style={[styles.cardTotalLabel, { color: isDark ? '#94A3B8' : '#64748B' }]}>
+              {isCreditCard ? 'Available Credit' : 'Total Balance'}
+            </Text>
             <Text style={[styles.cardBalanceText, { color: isDark ? '#FFFFFF' : '#0F172A' }]}>
-              {formatCurrency(wallet.balance, wallet.currency)}
+              {isCreditCard 
+                ? formatCurrency(remainingCredit, wallet.currency) 
+                : formatCurrency(wallet.balance, wallet.currency)}
             </Text>
           </View>
           <View style={styles.logoContainer}>
@@ -218,7 +227,7 @@ export default function WalletsScreen() {
   const fetchWalletTransactions = async (walletId: string) => {
     setLoadingTransactions(true);
     try {
-      const res = await api.get(`/transactions?walletId=${walletId}&limit=20`);
+      const res = await api.get(`/transactions?walletId=${walletId}&limit=50`);
       if (res.data.success) {
         setWalletTransactions(res.data.data);
       }
@@ -368,6 +377,52 @@ export default function WalletsScreen() {
     return <Widget size={18} color="#8B5CF6" />;
   };
 
+  // Compute category split breakdown of expenses for this month for pie chart KPI
+  const getWalletKPIBreakdown = () => {
+    const categoryTotals: { [categoryName: string]: number } = {};
+    let totalExpense = 0;
+
+    const currentMonthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+    
+    // Filter wallet transactions belonging to the current month that are expenses
+    const monthlyExpenses = walletTransactions.filter(t => {
+      const tDate = new Date(t.date);
+      return tDate >= currentMonthStart && t.type === 'expense';
+    });
+
+    monthlyExpenses.forEach(t => {
+      const catName = t.categoryId?.name || 'Other';
+      categoryTotals[catName] = (categoryTotals[catName] || 0) + Number(t.amount);
+      totalExpense += Number(t.amount);
+    });
+
+    const colorsList = ['#3B82F6', '#8B5CF6', '#F59E0B', '#EF4444', '#EC4899', '#10B981'];
+    let accumulatedPercent = 0;
+
+    const slices = Object.entries(categoryTotals).map(([name, amount], index) => {
+      const percent = totalExpense > 0 ? (amount / totalExpense) : 0;
+      const strokeOffset = 2 * Math.PI * 35 * (1 - percent);
+      const strokeDasharray = `${2 * Math.PI * 35}`;
+      const rotation = accumulatedPercent * 360;
+      accumulatedPercent += percent;
+      const color = colorsList[index % colorsList.length];
+
+      return {
+        name,
+        amount,
+        percent,
+        strokeOffset,
+        strokeDasharray,
+        rotation,
+        color,
+      };
+    });
+
+    return { slices, totalExpense };
+  };
+
+  const { slices: kpiSlices, totalExpense: kpiTotalExpense } = getWalletKPIBreakdown();
+
   if (isLoading) {
     return (
       <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
@@ -414,6 +469,82 @@ export default function WalletsScreen() {
             />
           ))}
         </ScrollView>
+
+        {/* KPI Monthly Performance Pie Chart Section */}
+        {selectedWalletId && (
+          <View style={styles.kpiContainer}>
+            <Text style={[styles.kpiSectionTitle, { color: colors.text }]}>Monthly Wallet Performance</Text>
+            <View style={[styles.kpiCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+              {kpiTotalExpense === 0 ? (
+                <View style={styles.kpiEmptyContainer}>
+                  <Svg height="90" width="90" viewBox="0 0 100 100">
+                    <Circle
+                      cx="50"
+                      cy="50"
+                      r="35"
+                      fill="transparent"
+                      stroke={isDark ? '#334155' : '#E2E8F0'}
+                      strokeWidth="10"
+                    />
+                  </Svg>
+                  <Text style={[styles.kpiEmptyText, { color: colors.textSecondary }]}>
+                    No expenses logged this month
+                  </Text>
+                </View>
+              ) : (
+                <View style={styles.kpiRow}>
+                  {/* SVG Pie Chart */}
+                  <View style={styles.chartWrapper}>
+                    <Svg height="100" width="100" viewBox="0 0 100 100">
+                      {kpiSlices.map((slice, index) => (
+                        <Circle
+                          key={index}
+                          cx="50"
+                          cy="50"
+                          r="35"
+                          fill="transparent"
+                          stroke={slice.color}
+                          strokeWidth="11"
+                          strokeDasharray={slice.strokeDasharray}
+                          strokeDashoffset={slice.strokeOffset}
+                          transform={`rotate(${slice.rotation - 90} 50 50)`}
+                        />
+                      ))}
+                    </Svg>
+                    <View style={styles.chartCenterTextContainer}>
+                      <Text style={[styles.chartCenterLabel, { color: colors.textSecondary }]}>Spent</Text>
+                      <Text style={[styles.chartCenterValue, { color: colors.text }]} numberOfLines={1}>
+                        {formatCurrency(kpiTotalExpense, user?.currency)}
+                      </Text>
+                    </View>
+                  </View>
+
+                  {/* Legend Category Split */}
+                  <View style={styles.legendContainer}>
+                    {kpiSlices.slice(0, 3).map((slice, idx) => (
+                      <View key={idx} style={styles.legendRow}>
+                        <View style={[styles.legendDot, { backgroundColor: slice.color }]} />
+                        <View style={styles.legendTextWrapper}>
+                          <Text style={[styles.legendName, { color: colors.text }]} numberOfLines={1}>
+                            {slice.name}
+                          </Text>
+                          <Text style={[styles.legendPercent, { color: colors.textSecondary }]}>
+                            {Math.round(slice.percent * 100)}% ({formatCurrency(slice.amount, user?.currency)})
+                          </Text>
+                        </View>
+                      </View>
+                    ))}
+                    {kpiSlices.length > 3 && (
+                      <Text style={[styles.moreSlicesText, { color: '#8B5CF6' }]}>
+                        + {kpiSlices.length - 3} more categories
+                      </Text>
+                    )}
+                  </View>
+                </View>
+              )}
+            </View>
+          </View>
+        )}
 
         {/* Selected Wallet Transactions Header */}
         <View style={styles.transactionsHeaderRow}>
@@ -727,6 +858,89 @@ const styles = StyleSheet.create({
   },
   footerActionBtn: {
     padding: 6,
+  },
+  kpiContainer: {
+    paddingHorizontal: 24,
+    marginBottom: 16,
+  },
+  kpiSectionTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    marginBottom: 12,
+  },
+  kpiCard: {
+    borderRadius: 20,
+    padding: 16,
+    borderWidth: 1,
+  },
+  kpiEmptyContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+  },
+  kpiEmptyText: {
+    fontSize: 13,
+    fontWeight: '500',
+    marginTop: 10,
+  },
+  kpiRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  chartWrapper: {
+    width: 100,
+    height: 100,
+    justifyContent: 'center',
+    alignItems: 'center',
+    position: 'relative',
+  },
+  chartCenterTextContainer: {
+    position: 'absolute',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: 60,
+  },
+  chartCenterLabel: {
+    fontSize: 9,
+    fontWeight: '600',
+  },
+  chartCenterValue: {
+    fontSize: 11,
+    fontWeight: '700',
+    marginTop: 2,
+    textAlign: 'center',
+  },
+  legendContainer: {
+    flex: 1,
+    marginLeft: 20,
+    gap: 10,
+  },
+  legendRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  legendDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  legendTextWrapper: {
+    flex: 1,
+  },
+  legendName: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  legendPercent: {
+    fontSize: 10,
+    marginTop: 1,
+  },
+  moreSlicesText: {
+    fontSize: 10,
+    fontWeight: '600',
+    marginLeft: 16,
   },
   transactionsHeaderRow: {
     flexDirection: 'row',
