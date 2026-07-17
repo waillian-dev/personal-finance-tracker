@@ -279,8 +279,6 @@ export default function AddTransactionModal() {
 
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
-      {/* Remove Expo Stack Header Duplicate */}
-      <Stack.Screen options={{ headerShown: false }} />
 
       {/* Header */}
       <View style={[styles.header, { borderBottomColor: colors.border }]}>

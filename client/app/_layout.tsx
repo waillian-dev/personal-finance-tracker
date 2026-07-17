@@ -173,7 +173,7 @@ function RootLayoutNav() {
         <Stack.Screen name="transactions" options={{ headerShown: false }} />
         <Stack.Screen name="categories" options={{ headerShown: false }} />
         <Stack.Screen name="friend-ledger" options={{ headerShown: false }} />
-        <Stack.Screen name="modal" options={{ presentation: 'modal', headerShown: true, title: 'Add Transaction' }} />
+        <Stack.Screen name="modal" options={{ presentation: 'modal', headerShown: false }} />
       </Stack>
     </View>
   );
