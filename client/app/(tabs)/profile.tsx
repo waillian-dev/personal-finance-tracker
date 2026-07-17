@@ -239,13 +239,19 @@ export default function ProfileScreen() {
         {/* Group 4: LEGAL */}
         <Text style={[styles.sectionHeader, { color: colors.textSecondary }]}>LEGAL</Text>
         <View style={[styles.menuGroup, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          <TouchableOpacity style={[styles.menuItem, { borderBottomColor: colors.border }]}>
+          <TouchableOpacity 
+            style={[styles.menuItem, { borderBottomColor: colors.border }]}
+            onPress={() => router.push('/privacy-policy')}
+          >
             {renderIcon(ShieldKeyhole, 'rgba(16, 185, 129, 0.1)', '#10B981')}
             <Text style={[styles.menuText, { color: colors.text }]}>Privacy Policy</Text>
             <AltArrowRight size={18} color={colors.textSecondary} />
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.menuItem}>
+          <TouchableOpacity 
+            style={styles.menuItem}
+            onPress={() => router.push('/terms-conditions')}
+          >
             {renderIcon(CheckCircle, 'rgba(245, 158, 11, 0.1)', '#F59E0B')}
             <Text style={[styles.menuText, { color: colors.text }]}>Terms and Conditions</Text>
             <AltArrowRight size={18} color={colors.textSecondary} />

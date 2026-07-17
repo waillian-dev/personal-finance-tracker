@@ -175,6 +175,9 @@ function RootLayoutNav() {
         <Stack.Screen name="friend-ledger" options={{ headerShown: false }} />
         <Stack.Screen name="modal" options={{ presentation: 'modal', headerShown: false }} />
         <Stack.Screen name="goal-detail" options={{ headerShown: false }} />
+        <Stack.Screen name="goals" options={{ headerShown: false }} />
+        <Stack.Screen name="privacy-policy" options={{ headerShown: false }} />
+        <Stack.Screen name="terms-conditions" options={{ headerShown: false }} />
         <Stack.Screen name="account-settings" options={{ headerShown: false }} />
         <Stack.Screen name="auto-transactions" options={{ headerShown: false }} />
       </Stack>

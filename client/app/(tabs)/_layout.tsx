@@ -9,13 +9,12 @@ import * as SolarBold from '@solar-icons/react-native/Bold';
 import {
   Home2,
   Wallet,
-  BellBing,
   User,
 } from '@solar-icons/react-native/Bold';
 
-function TabItem({ label, isFocused, onPress, onLongPress, routeName, isDark }: any) {
+function TabItem({ label, isFocused, onPress, onLongPress, routeName, colors }: any) {
   const scaleValue = useRef(new Animated.Value(isFocused ? 1.08 : 1)).current;
-  const opacityValue = useRef(new Animated.Value(isFocused ? 1 : 0.55)).current;
+  const opacityValue = useRef(new Animated.Value(isFocused ? 1 : 0.65)).current;
 
   useEffect(() => {
     Animated.parallel([
@@ -26,7 +25,7 @@ function TabItem({ label, isFocused, onPress, onLongPress, routeName, isDark }: 
         friction: 6,
       }),
       Animated.timing(opacityValue, {
-        toValue: isFocused ? 1 : 0.55,
+        toValue: isFocused ? 1 : 0.65,
         duration: 150,
         useNativeDriver: true,
       }),
@@ -40,10 +39,10 @@ function TabItem({ label, isFocused, onPress, onLongPress, routeName, isDark }: 
         onPress={onPress}
         style={styles.centerTabContainer}
       >
-        <View style={styles.floatingCenterButton}>
-          <FontAwesome name="plus" size={20} color="#1E293B" />
+        <View style={[styles.floatingCenterButton, { backgroundColor: colors.primary }]}>
+          <FontAwesome name="plus" size={20} color="#FFFFFF" />
         </View>
-        <Text style={[styles.centerTabLabel, { color: 'rgba(255, 255, 255, 0.75)' }]}>
+        <Text style={[styles.centerTabLabel, { color: colors.textSecondary }]}>
           {label}
         </Text>
       </TouchableOpacity>
@@ -56,8 +55,8 @@ function TabItem({ label, isFocused, onPress, onLongPress, routeName, isDark }: 
         return <Home2 size={22} color={color} />;
       case 'two':
         return <Wallet size={22} color={color} />;
-      case 'notifications-placeholder':
-        return <BellBing size={22} color={color} />;
+      case 'friends':
+        return <FontAwesome name="users" size={20} color={color} />;
       case 'profile':
         return <User size={22} color={color} />;
       default:
@@ -65,9 +64,8 @@ function TabItem({ label, isFocused, onPress, onLongPress, routeName, isDark }: 
     }
   };
 
-  const activeColor = '#FFFFFF';
-  const inactiveColor = 'rgba(255, 255, 255, 0.55)';
-  const activeTextColor = '#C5D2FF';
+  const activeColor = colors.primary;
+  const inactiveColor = colors.textSecondary;
 
   return (
     <TouchableOpacity
@@ -79,7 +77,7 @@ function TabItem({ label, isFocused, onPress, onLongPress, routeName, isDark }: 
     >
       <Animated.View style={[styles.tabItemInner, { transform: [{ scale: scaleValue }], opacity: opacityValue }]}>
         {renderIcon(isFocused ? activeColor : inactiveColor)}
-        <Text style={[styles.tabLabel, { color: isFocused ? activeTextColor : inactiveColor, fontWeight: isFocused ? '700' : '500' }]}>
+        <Text style={[styles.tabLabel, { color: isFocused ? activeColor : inactiveColor, fontWeight: isFocused ? '700' : '500' }]}>
           {label}
         </Text>
       </Animated.View>
@@ -87,11 +85,11 @@ function TabItem({ label, isFocused, onPress, onLongPress, routeName, isDark }: 
   );
 }
 
-function FloatingTabBar({ state, descriptors, navigation, isDark }: any) {
+function FloatingTabBar({ state, descriptors, navigation, colors }: any) {
   const router = useRouter();
   
   return (
-    <View style={[styles.tabContainer, { backgroundColor: isDark ? '#0F172A' : '#1E293B' }]}>
+    <View style={[styles.tabContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
       {state.routes.map((route: any, index: number) => {
         const { options } = descriptors[route.key];
         const label =
@@ -101,17 +99,13 @@ function FloatingTabBar({ state, descriptors, navigation, isDark }: any) {
             ? options.title
             : route.name;
 
-        if (['_sitemap', '+not-found', 'goals', 'friends'].includes(route.name)) return null;
+        if (['_sitemap', '+not-found', 'goals', 'friends-placeholder', 'notifications-placeholder'].includes(route.name)) return null;
 
         const isFocused = state.index === index;
 
         const onPress = () => {
           if (route.name === 'add-placeholder') {
             router.push('/modal');
-            return;
-          }
-          if (route.name === 'notifications-placeholder') {
-            router.push('/notifications');
             return;
           }
 
@@ -141,7 +135,7 @@ function FloatingTabBar({ state, descriptors, navigation, isDark }: any) {
             onPress={onPress}
             onLongPress={onLongPress}
             routeName={route.name}
-            isDark={isDark}
+            colors={colors}
           />
         );
       })}
@@ -150,10 +144,10 @@ function FloatingTabBar({ state, descriptors, navigation, isDark }: any) {
 }
 
 export default function TabLayout() {
-  const { isDark } = useThemeColors();
+  const { colors } = useThemeColors();
   return (
     <Tabs
-      tabBar={(props) => <FloatingTabBar {...props} isDark={isDark} />}
+      tabBar={(props) => <FloatingTabBar {...props} colors={colors} />}
       screenOptions={{
         headerShown: false,
       }}
@@ -177,27 +171,15 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="notifications-placeholder"
+        name="friends"
         options={{
-          title: 'Notification',
+          title: 'Friends',
         }}
       />
       <Tabs.Screen
         name="profile"
         options={{
           title: 'Profile',
-        }}
-      />
-      <Tabs.Screen
-        name="goals"
-        options={{
-          href: null,
-        }}
-      />
-      <Tabs.Screen
-        name="friends"
-        options={{
-          href: null,
         }}
       />
     </Tabs>
@@ -215,11 +197,12 @@ const styles = StyleSheet.create({
     height: 72,
     alignItems: 'center',
     justifyContent: 'space-around',
+    borderWidth: 1,
     shadowColor: '#000000',
     shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.15,
+    shadowOpacity: 0.05,
     shadowRadius: 20,
-    elevation: 10,
+    elevation: 8,
     paddingHorizontal: 8,
   },
   tabItem: {
@@ -247,15 +230,14 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: '#C5D2FF',
     alignItems: 'center',
     justifyContent: 'center',
     transform: [{ translateY: -10 }],
-    shadowColor: '#C5D2FF',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.35,
-    shadowRadius: 10,
-    elevation: 6,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    elevation: 4,
   },
   centerTabLabel: {
     fontSize: 9,

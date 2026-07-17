@@ -15,18 +15,19 @@ import {
 } from 'react-native';
 import { FontAwesome } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import api from '../../services/api';
-import { Wallet } from '../../types';
-import { useAuthStore } from '../../store/authStore';
-import { formatCurrency } from '../../utils/currency';
-import CustomAlert from '../../components/CustomAlert';
-import { useThemeColors } from '../../hooks/useThemeColors';
+import api from '../services/api';
+import { Wallet } from '../types';
+import { useAuthStore } from '../store/authStore';
+import { formatCurrency } from '../utils/currency';
+import CustomAlert from '../components/CustomAlert';
+import { useThemeColors } from '../hooks/useThemeColors';
 
 // Solar Icons
 import * as SolarBold from '@solar-icons/react-native/Bold';
 import {
   AddCircle,
   AltArrowRight,
+  AltArrowLeft,
   Widget,
 } from '@solar-icons/react-native/Bold';
 
@@ -308,8 +309,14 @@ export default function GoalsScreen() {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* Centered Large Header */}
-      <Text style={[styles.headerTitle, { color: colors.text }]}>Goals</Text>
+      {/* Header with back button */}
+      <View style={[styles.header, { borderBottomColor: colors.border }]}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+          <AltArrowLeft size={24} color={colors.text} />
+        </TouchableOpacity>
+        <Text style={[styles.headerTextTitle, { color: colors.text }]}>Goals</Text>
+        <View style={{ width: 28 }} />
+      </View>
 
       <ScrollView
         contentContainerStyle={styles.scrollContainer}
@@ -318,7 +325,7 @@ export default function GoalsScreen() {
         }
       >
         <View style={styles.headerRow}>
-          <Text style={[styles.title, { color: '#1E293B' }]}>All My Goals</Text>
+          <Text style={[styles.title, { color: colors.text }]}>All My Goals</Text>
           <TouchableOpacity
             style={styles.addButton}
             onPress={openBottomSheet}
@@ -538,6 +545,21 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 24,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+  },
+  backButton: {
+    padding: 4,
+  },
+  headerTextTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+  },
   headerTitle: {
     fontSize: 22,
     fontWeight: '700',
@@ -593,7 +615,7 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     borderWidth: 1,
     padding: 20,
-    shadowColor: '#000',
+    shadowColor: '#00',
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.02,
     shadowRadius: 12,
@@ -799,16 +821,12 @@ const styles = StyleSheet.create({
     transform: [{ scale: 1.1 }],
   },
   submitButton: {
-    backgroundColor: '#1E293B',
     height: 52,
     borderRadius: 14,
+    backgroundColor: '#1E293B',
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
+    marginTop: 10,
   },
   submitButtonText: {
     color: '#FFFFFF',
