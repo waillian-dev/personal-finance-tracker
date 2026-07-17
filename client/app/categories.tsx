@@ -40,6 +40,10 @@ const SOLAR_ICONS = [
   'Heart',
   'Notes',
   'Bill',
+  'User',
+  'Bell',
+  'Moon',
+  'Sun',
 ];
 
 export default function CategoriesScreen() {
@@ -168,10 +172,6 @@ export default function CategoriesScreen() {
   };
 
   const handleStartEdit = (cat: Category) => {
-    if (!cat.userId) {
-      triggerAlert('Protected', 'System default categories cannot be modified', 'info');
-      return;
-    }
     setEditingId(cat._id);
     setName(cat.name);
     setType(cat.type);
@@ -181,11 +181,6 @@ export default function CategoriesScreen() {
   };
 
   const handleDeleteCategory = (cat: Category) => {
-    if (!cat.userId) {
-      triggerAlert('Protected', 'System default categories cannot be deleted', 'info');
-      return;
-    }
-
     triggerConfirm(
       'Delete Category',
       `Are you sure you want to delete "${cat.name}"? Transactions using this category will still exist but default category icons will be loaded.`,
@@ -265,16 +260,14 @@ export default function CategoriesScreen() {
                 </View>
               </View>
               
-              {cat.userId && (
-                <View style={styles.actions}>
-                  <TouchableOpacity style={styles.actionIcon} onPress={() => handleStartEdit(cat)}>
-                    <FontAwesome name="edit" size={15} color="#059669" />
-                  </TouchableOpacity>
-                  <TouchableOpacity style={styles.actionIcon} onPress={() => handleDeleteCategory(cat)}>
-                    <FontAwesome name="trash" size={15} color="#EF4444" />
-                  </TouchableOpacity>
-                </View>
-              )}
+              <View style={styles.actions}>
+                <TouchableOpacity style={styles.actionIcon} onPress={() => handleStartEdit(cat)}>
+                  <FontAwesome name="edit" size={15} color="#059669" />
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.actionIcon} onPress={() => handleDeleteCategory(cat)}>
+                  <FontAwesome name="trash" size={15} color="#EF4444" />
+                </TouchableOpacity>
+              </View>
             </View>
           ))}
 
@@ -294,16 +287,14 @@ export default function CategoriesScreen() {
                 </View>
               </View>
 
-              {cat.userId && (
-                <View style={styles.actions}>
-                  <TouchableOpacity style={styles.actionIcon} onPress={() => handleStartEdit(cat)}>
-                    <FontAwesome name="edit" size={15} color="#059669" />
-                  </TouchableOpacity>
-                  <TouchableOpacity style={styles.actionIcon} onPress={() => handleDeleteCategory(cat)}>
-                    <FontAwesome name="trash" size={15} color="#EF4444" />
-                  </TouchableOpacity>
-                </View>
-              )}
+              <View style={styles.actions}>
+                <TouchableOpacity style={styles.actionIcon} onPress={() => handleStartEdit(cat)}>
+                  <FontAwesome name="edit" size={15} color="#059669" />
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.actionIcon} onPress={() => handleDeleteCategory(cat)}>
+                  <FontAwesome name="trash" size={15} color="#EF4444" />
+                </TouchableOpacity>
+              </View>
             </View>
           ))}
         </ScrollView>

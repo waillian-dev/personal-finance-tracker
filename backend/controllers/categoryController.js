@@ -70,12 +70,7 @@ const updateCategory = async (req, res) => {
       return res.status(404).json({ success: false, error: 'Category not found' });
     }
 
-    // System default categories cannot be modified
-    if (!category.userId) {
-      return res.status(403).json({ success: false, error: 'System categories cannot be modified' });
-    }
-
-    if (category.userId.toString() !== req.user.id) {
+    if (category.userId && category.userId.toString() !== req.user.id) {
       return res.status(401).json({ success: false, error: 'Not authorized' });
     }
 
@@ -101,12 +96,7 @@ const deleteCategory = async (req, res) => {
       return res.status(404).json({ success: false, error: 'Category not found' });
     }
 
-    // System default categories cannot be deleted
-    if (!category.userId) {
-      return res.status(403).json({ success: false, error: 'System categories cannot be deleted' });
-    }
-
-    if (category.userId.toString() !== req.user.id) {
+    if (category.userId && category.userId.toString() !== req.user.id) {
       return res.status(401).json({ success: false, error: 'Not authorized' });
     }
 
