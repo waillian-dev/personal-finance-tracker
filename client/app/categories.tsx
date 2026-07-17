@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   StyleSheet,
   Text,
@@ -8,6 +8,9 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   SafeAreaView,
+  Animated,
+  Dimensions,
+  Modal,
 } from 'react-native';
 import { FontAwesome } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -16,6 +19,13 @@ import { Category } from '../types';
 import CustomAlert from '../components/CustomAlert';
 import { useThemeColors } from '../hooks/useThemeColors';
 
+// Solar Icons imports
+import {
+  AltArrowLeft,
+  AddCircle,
+} from '@solar-icons/react-native/Bold';
+
+const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 const COLORS = ['#10B981', '#3B82F6', '#8B5CF6', '#F59E0B', '#EF4444', '#EC4899', '#14B8A6', '#6366F1'];
 const EMOJIS = ['📁', '🍔', '🛒', '🚗', '🎬', '🏠', '👕', '🏥', '🎓', '💼', '💰', '🎁', '✈️', '🔧', '🍕', '💡'];
 
@@ -33,6 +43,9 @@ export default function CategoriesScreen() {
   const [selectedColor, setSelectedColor] = useState(COLORS[0]);
   const [selectedEmoji, setSelectedEmoji] = useState(EMOJIS[0]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Bottom Sheet Slide Animation
+  const slideAnim = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
 
   // Custom Alert/Confirmation Dialog States
   const [alertDialog, setAlertDialog] = useState({
@@ -83,6 +96,25 @@ export default function CategoriesScreen() {
     fetchCategories();
   }, []);
 
+  const openBottomSheet = () => {
+    setIsAdding(true);
+    Animated.timing(slideAnim, {
+      toValue: 0,
+      duration: 350,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const closeBottomSheet = () => {
+    Animated.timing(slideAnim, {
+      toValue: SCREEN_HEIGHT,
+      duration: 300,
+      useNativeDriver: true,
+    }).start(() => {
+      resetForm();
+    });
+  };
+
   const handleSaveCategory = async () => {
     if (!name.trim()) {
       triggerAlert('Validation Error', 'Category name is required', 'warning');
@@ -101,9 +133,9 @@ export default function CategoriesScreen() {
         });
 
         if (response.data.success) {
-          triggerAlert('Success', 'Category updated successfully!', 'success');
-          resetForm();
+          closeBottomSheet();
           fetchCategories();
+          triggerAlert('Success', 'Category updated successfully!', 'success');
         }
       } else {
         // Create Custom Category
@@ -115,9 +147,9 @@ export default function CategoriesScreen() {
         });
 
         if (response.data.success) {
-          triggerAlert('Success', 'New Category added successfully!', 'success');
-          resetForm();
+          closeBottomSheet();
           fetchCategories();
+          triggerAlert('Success', 'New Category added successfully!', 'success');
         }
       }
     } catch (err: any) {
@@ -137,7 +169,7 @@ export default function CategoriesScreen() {
     setType(cat.type);
     setSelectedColor(cat.color || COLORS[0]);
     setSelectedEmoji(cat.emoji || EMOJIS[0]);
-    setIsAdding(true);
+    openBottomSheet();
   };
 
   const handleDeleteCategory = (cat: Category) => {
@@ -174,23 +206,19 @@ export default function CategoriesScreen() {
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Header */}
-      <View style={[styles.header, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
+      <View style={[styles.header, { borderBottomColor: colors.border }]}>
         <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-          <FontAwesome name="arrow-left" size={18} color={colors.text} />
+          <AltArrowLeft size={22} color={colors.text} />
         </TouchableOpacity>
         <Text style={[styles.headerTitle, { color: colors.text }]}>Manage Categories</Text>
         <TouchableOpacity
           style={styles.addButton}
-          onPress={() => {
-            if (isAdding) resetForm();
-            else setIsAdding(true);
-          }}
+          onPress={openBottomSheet}
         >
-          <FontAwesome name={isAdding ? 'times' : 'plus'} size={18} color="#059669" />
+          <AddCircle size={22} color="#059669" />
         </TouchableOpacity>
       </View>
 
-      {/* Custom alert modal overlay */}
       <CustomAlert
         visible={alertDialog.visible}
         type={alertDialog.type}
@@ -207,14 +235,96 @@ export default function CategoriesScreen() {
         </View>
       ) : (
         <ScrollView contentContainerStyle={styles.scrollContainer} keyboardShouldPersistTaps="handled">
-          
-          {/* CATEGORY FORM CARD (Add / Edit) */}
-          {isAdding && (
-            <View style={[styles.formCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-              <Text style={[styles.formTitle, { color: colors.text }]}>
-                {editingId ? 'Edit Custom Category' : 'Create Custom Category'}
-              </Text>
+          {/* EXPENSE CATEGORIES */}
+          <Text style={[styles.sectionSubtitle, { color: colors.textSecondary }]}>Expense Categories</Text>
+          {categories.filter(c => c.type === 'expense').map((cat) => (
+            <View key={cat._id} style={[styles.categoryRow, { backgroundColor: colors.card, borderColor: colors.border }]}>
+              <View style={styles.catInfo}>
+                <View style={[styles.catIconWrapper, { backgroundColor: cat.color ? `${cat.color}15` : (isDark ? '#334155' : '#F1F5F9') }]}>
+                  <Text style={styles.catEmoji}>{cat.emoji || '📁'}</Text>
+                </View>
+                <View>
+                  <Text style={[styles.catName, { color: colors.text }]}>{cat.name}</Text>
+                  <Text style={[styles.catMeta, { color: colors.textSecondary }]}>
+                    {cat.userId ? 'Custom' : 'System Default'}
+                  </Text>
+                </View>
+              </View>
+              
+              {cat.userId && (
+                <View style={styles.actions}>
+                  <TouchableOpacity style={styles.actionIcon} onPress={() => handleStartEdit(cat)}>
+                    <FontAwesome name="edit" size={15} color="#059669" />
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.actionIcon} onPress={() => handleDeleteCategory(cat)}>
+                    <FontAwesome name="trash" size={15} color="#EF4444" />
+                  </TouchableOpacity>
+                </View>
+              )}
+            </View>
+          ))}
 
+          {/* INCOME CATEGORIES */}
+          <Text style={[styles.sectionSubtitle, { color: colors.textSecondary, marginTop: 24 }]}>Income Categories</Text>
+          {categories.filter(c => c.type === 'income').map((cat) => (
+            <View key={cat._id} style={[styles.categoryRow, { backgroundColor: colors.card, borderColor: colors.border }]}>
+              <View style={styles.catInfo}>
+                <View style={[styles.catIconWrapper, { backgroundColor: cat.color ? `${cat.color}15` : (isDark ? '#334155' : '#F1F5F9') }]}>
+                  <Text style={styles.catEmoji}>{cat.emoji || '💰'}</Text>
+                </View>
+                <View>
+                  <Text style={[styles.catName, { color: colors.text }]}>{cat.name}</Text>
+                  <Text style={[styles.catMeta, { color: colors.textSecondary }]}>
+                    {cat.userId ? 'Custom' : 'System Default'}
+                  </Text>
+                </View>
+              </View>
+
+              {cat.userId && (
+                <View style={styles.actions}>
+                  <TouchableOpacity style={styles.actionIcon} onPress={() => handleStartEdit(cat)}>
+                    <FontAwesome name="edit" size={15} color="#059669" />
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.actionIcon} onPress={() => handleDeleteCategory(cat)}>
+                    <FontAwesome name="trash" size={15} color="#EF4444" />
+                  </TouchableOpacity>
+                </View>
+              )}
+            </View>
+          ))}
+        </ScrollView>
+      )}
+
+      {/* Slide-from-bottom Category Form Drawer Sheet */}
+      <Modal
+        visible={isAdding}
+        transparent
+        animationType="fade"
+        onRequestClose={closeBottomSheet}
+      >
+        <View style={styles.sheetOverlay}>
+          <TouchableOpacity
+            style={styles.sheetBackdrop}
+            activeOpacity={1}
+            onPress={closeBottomSheet}
+          />
+          <Animated.View
+            style={[
+              styles.sheetContent,
+              {
+                backgroundColor: colors.card,
+                transform: [{ translateY: slideAnim }],
+              },
+            ]}
+          >
+            {/* Grabber indicator */}
+            <View style={[styles.sheetGrabber, { backgroundColor: colors.border }]} />
+
+            <Text style={[styles.formTitle, { color: colors.text }]}>
+              {editingId ? 'Edit Custom Category' : 'Create Custom Category'}
+            </Text>
+
+            <ScrollView contentContainerStyle={{ paddingBottom: 30 }}>
               <View style={styles.inputGroup}>
                 <Text style={[styles.label, { color: colors.textSecondary }]}>Category Name</Text>
                 <TextInput
@@ -230,7 +340,11 @@ export default function CategoriesScreen() {
                 <Text style={[styles.label, { color: colors.textSecondary }]}>Category Flow Type</Text>
                 <View style={styles.typeGrid}>
                   <TouchableOpacity
-                    style={[styles.typeBtn, { backgroundColor: colors.inputBg, borderColor: colors.border }, type === 'expense' && styles.typeBtnActiveExpense]}
+                    style={[
+                      styles.typeBtn,
+                      { backgroundColor: colors.inputBg, borderColor: colors.border },
+                      type === 'expense' && styles.typeBtnActiveExpense,
+                    ]}
                     onPress={() => setType('expense')}
                   >
                     <Text style={[styles.typeBtnText, type === 'expense' && styles.typeBtnTextActive]}>
@@ -238,7 +352,11 @@ export default function CategoriesScreen() {
                     </Text>
                   </TouchableOpacity>
                   <TouchableOpacity
-                    style={[styles.typeBtn, { backgroundColor: colors.inputBg, borderColor: colors.border }, type === 'income' && styles.typeBtnActiveIncome]}
+                    style={[
+                      styles.typeBtn,
+                      { backgroundColor: colors.inputBg, borderColor: colors.border },
+                      type === 'income' && styles.typeBtnActiveIncome,
+                    ]}
                     onPress={() => setType('income')}
                   >
                     <Text style={[styles.typeBtnText, type === 'income' && styles.typeBtnTextActive]}>
@@ -285,7 +403,7 @@ export default function CategoriesScreen() {
               </View>
 
               <View style={styles.buttonRow}>
-                <TouchableOpacity style={styles.cancelBtn} onPress={resetForm}>
+                <TouchableOpacity style={styles.cancelBtn} onPress={closeBottomSheet}>
                   <Text style={styles.cancelBtnText}>Cancel</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
@@ -300,68 +418,10 @@ export default function CategoriesScreen() {
                   )}
                 </TouchableOpacity>
               </View>
-            </View>
-          )}
-
-          {/* LIST OF CATEGORIES */}
-          <Text style={[styles.sectionSubtitle, { color: colors.textSecondary }]}>Expense Categories</Text>
-          {categories.filter(c => c.type === 'expense').map((cat) => (
-            <View key={cat._id} style={[styles.categoryRow, { backgroundColor: colors.card, borderColor: colors.border }]}>
-              <View style={styles.catInfo}>
-                <View style={[styles.catIconWrapper, { backgroundColor: cat.color ? `${cat.color}15` : (isDark ? '#334155' : '#F1F5F9') }]}>
-                  <Text style={styles.catEmoji}>{cat.emoji || '📁'}</Text>
-                </View>
-                <View>
-                  <Text style={[styles.catName, { color: colors.text }]}>{cat.name}</Text>
-                  <Text style={[styles.catMeta, { color: colors.textSecondary }]}>
-                    {cat.userId ? 'Custom' : 'System Default'}
-                  </Text>
-                </View>
-              </View>
-              
-              {cat.userId && (
-                <View style={styles.actions}>
-                  <TouchableOpacity style={styles.actionIcon} onPress={() => handleStartEdit(cat)}>
-                    <FontAwesome name="edit" size={16} color="#059669" />
-                  </TouchableOpacity>
-                  <TouchableOpacity style={styles.actionIcon} onPress={() => handleDeleteCategory(cat)}>
-                    <FontAwesome name="trash" size={16} color="#EF4444" />
-                  </TouchableOpacity>
-                </View>
-              )}
-            </View>
-          ))}
-
-          <Text style={[styles.sectionSubtitle, { color: colors.textSecondary, marginTop: 24 }]}>Income Categories</Text>
-          {categories.filter(c => c.type === 'income').map((cat) => (
-            <View key={cat._id} style={[styles.categoryRow, { backgroundColor: colors.card, borderColor: colors.border }]}>
-              <View style={styles.catInfo}>
-                <View style={[styles.catIconWrapper, { backgroundColor: cat.color ? `${cat.color}15` : (isDark ? '#334155' : '#F1F5F9') }]}>
-                  <Text style={styles.catEmoji}>{cat.emoji || '💰'}</Text>
-                </View>
-                <View>
-                  <Text style={[styles.catName, { color: colors.text }]}>{cat.name}</Text>
-                  <Text style={[styles.catMeta, { color: colors.textSecondary }]}>
-                    {cat.userId ? 'Custom' : 'System Default'}
-                  </Text>
-                </View>
-              </View>
-
-              {cat.userId && (
-                <View style={styles.actions}>
-                  <TouchableOpacity style={styles.actionIcon} onPress={() => handleStartEdit(cat)}>
-                    <FontAwesome name="edit" size={16} color="#059669" />
-                  </TouchableOpacity>
-                  <TouchableOpacity style={styles.actionIcon} onPress={() => handleDeleteCategory(cat)}>
-                    <FontAwesome name="trash" size={16} color="#EF4444" />
-                  </TouchableOpacity>
-                </View>
-              )}
-            </View>
-          ))}
-
-        </ScrollView>
-      )}
+            </ScrollView>
+          </Animated.View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -369,34 +429,24 @@ export default function CategoriesScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingTop: 16,
-    paddingBottom: 16,
-    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 24,
+    paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
   },
   backButton: {
-    padding: 8,
-    borderRadius: 8,
-    backgroundColor: '#F1F5F9',
+    padding: 4,
   },
   headerTitle: {
-    fontFamily: 'System',
     fontSize: 18,
-    fontWeight: 'bold',
-    color: '#0F172A',
+    fontWeight: '700',
   },
   addButton: {
-    padding: 8,
-    borderRadius: 8,
-    backgroundColor: '#D1FAE5',
+    padding: 4,
   },
   loadingContainer: {
     flex: 1,
@@ -404,44 +454,112 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   scrollContainer: {
-    padding: 20,
+    padding: 24,
     paddingBottom: 40,
   },
-  formCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    padding: 20,
+  sectionSubtitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    marginBottom: 12,
+  },
+  categoryRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderRadius: 18,
+    padding: 14,
+    marginBottom: 10,
+    borderWidth: 1,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.02,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  catInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  catIconWrapper: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 14,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 1,
+  },
+  catEmoji: {
+    fontSize: 20,
+  },
+  catName: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  catMeta: {
+    fontSize: 11,
+    marginTop: 2,
+  },
+  actions: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  actionIcon: {
+    padding: 8,
+    borderRadius: 10,
     borderWidth: 1,
     borderColor: '#E2E8F0',
-    marginBottom: 24,
+  },
+  sheetOverlay: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+  },
+  sheetBackdrop: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+  sheetContent: {
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    paddingHorizontal: 24,
+    paddingTop: 12,
+    maxHeight: '85%',
+  },
+  sheetGrabber: {
+    width: 40,
+    height: 4.5,
+    borderRadius: 3,
+    alignSelf: 'center',
+    marginBottom: 20,
   },
   formTitle: {
-    fontFamily: 'System',
-    fontSize: 15,
-    fontWeight: 'bold',
-    color: '#0F172A',
-    marginBottom: 16,
+    fontSize: 18,
+    fontWeight: '700',
+    textAlign: 'center',
+    marginBottom: 18,
   },
   inputGroup: {
     marginBottom: 16,
   },
   label: {
-    fontFamily: 'System',
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '600',
-    color: '#475569',
     marginBottom: 8,
   },
   input: {
-    fontFamily: 'System',
-    backgroundColor: '#F8FAFC',
-    borderColor: '#E2E8F0',
-    borderWidth: 1,
     borderRadius: 12,
     height: 48,
-    paddingHorizontal: 16,
+    paddingHorizontal: 14,
+    borderWidth: 1,
     fontSize: 15,
-    color: '#0F172A',
   },
   typeGrid: {
     flexDirection: 'row',
@@ -449,11 +567,9 @@ const styles = StyleSheet.create({
   },
   typeBtn: {
     flex: 1,
-    height: 40,
-    borderRadius: 10,
-    backgroundColor: '#FFFFFF',
+    height: 44,
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -466,13 +582,13 @@ const styles = StyleSheet.create({
     borderColor: '#10B981',
   },
   typeBtnText: {
-    fontFamily: 'System',
     fontSize: 13,
     fontWeight: '600',
     color: '#64748B',
   },
   typeBtnTextActive: {
     color: '#0F172A',
+    fontWeight: '700',
   },
   colorGrid: {
     flexDirection: 'row',
@@ -497,11 +613,9 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 10,
-    backgroundColor: '#F8FAFC',
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: '#E2E8F0',
   },
   emojiCardActive: {
     borderColor: '#059669',
@@ -527,7 +641,6 @@ const styles = StyleSheet.create({
     borderColor: '#E2E8F0',
   },
   cancelBtnText: {
-    fontFamily: 'System',
     color: '#475569',
     fontWeight: 'bold',
     fontSize: 14,
@@ -541,65 +654,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   saveBtnText: {
-    fontFamily: 'System',
     color: '#FFFFFF',
     fontWeight: 'bold',
     fontSize: 14,
-  },
-  sectionSubtitle: {
-    fontFamily: 'System',
-    fontSize: 15,
-    fontWeight: 'bold',
-    color: '#0F172A',
-    marginBottom: 12,
-  },
-  categoryRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 8,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-  },
-  catInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  catIconWrapper: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 16,
-  },
-  catEmoji: {
-    fontSize: 18,
-  },
-  catName: {
-    fontFamily: 'System',
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: '#0F172A',
-  },
-  catMeta: {
-    fontFamily: 'System',
-    fontSize: 11,
-    color: '#94A3B8',
-    marginTop: 2,
-  },
-  actions: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  actionIcon: {
-    padding: 8,
-    borderRadius: 8,
-    backgroundColor: '#F8FAFC',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
   },
 });
