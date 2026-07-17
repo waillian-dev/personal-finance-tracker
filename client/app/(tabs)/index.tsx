@@ -406,7 +406,7 @@ export default function DashboardScreen() {
                 style={[styles.actionCircle, { backgroundColor: '#10B981' }]}
                 onPress={() => {
                   animatePress(actionScaleFriends);
-                  router.push('/profile');
+                  router.push('/menu');
                 }}
               >
                 <MenuDots size={22} color="#FFFFFF" />
