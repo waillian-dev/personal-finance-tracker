@@ -1,13 +1,79 @@
+import React from 'react';
 import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
-import { ActivityIndicator, View, StyleSheet } from 'react-native';
+import { ActivityIndicator, View, StyleSheet, Text, TextInput } from 'react-native';
 import 'react-native-reanimated';
 import { useRouter, useSegments } from 'expo-router';
 import { useAuthStore } from '../store/authStore';
 import { useThemeColors } from '../hooks/useThemeColors';
 import { StatusBar } from 'expo-status-bar';
+import {
+  LexendDeca_400Regular,
+  LexendDeca_500Medium,
+  LexendDeca_600SemiBold,
+  LexendDeca_700Bold,
+} from '@expo-google-fonts/lexend-deca';
+
+// Monkey-patch Text and TextInput to override default system fonts with Lexend Deca
+const patchTextComponents = () => {
+  const oldTextRender = (Text as any).render;
+  if (oldTextRender) {
+    (Text as any).render = function (...args: any[]) {
+      const origin = oldTextRender.apply(this, args);
+      if (!origin) return origin;
+      const style = origin.props.style;
+      const flat = StyleSheet.flatten(style) || {};
+
+      if (flat.fontFamily && flat.fontFamily !== 'System') {
+        return origin;
+      }
+
+      const isBold = flat.fontWeight === 'bold' || flat.fontWeight === '700' || flat.fontWeight === '800';
+      const isSemiBold = flat.fontWeight === '600';
+      const isMedium = flat.fontWeight === '500';
+
+      let font = 'LexendDeca-Regular';
+      if (isBold) font = 'LexendDeca-Bold';
+      else if (isSemiBold) font = 'LexendDeca-SemiBold';
+      else if (isMedium) font = 'LexendDeca-Medium';
+
+      return React.cloneElement(origin, {
+        style: [style, { fontFamily: font }]
+      });
+    };
+  }
+
+  const oldTextInputRender = (TextInput as any).render;
+  if (oldTextInputRender) {
+    (TextInput as any).render = function (...args: any[]) {
+      const origin = oldTextInputRender.apply(this, args);
+      if (!origin) return origin;
+      const style = origin.props.style;
+      const flat = StyleSheet.flatten(style) || {};
+
+      if (flat.fontFamily && flat.fontFamily !== 'System') {
+        return origin;
+      }
+
+      const isBold = flat.fontWeight === 'bold' || flat.fontWeight === '700' || flat.fontWeight === '800';
+      const isSemiBold = flat.fontWeight === '600';
+      const isMedium = flat.fontWeight === '500';
+
+      let font = 'LexendDeca-Regular';
+      if (isBold) font = 'LexendDeca-Bold';
+      else if (isSemiBold) font = 'LexendDeca-SemiBold';
+      else if (isMedium) font = 'LexendDeca-Medium';
+
+      return React.cloneElement(origin, {
+        style: [style, { fontFamily: font }]
+      });
+    };
+  }
+};
+
+patchTextComponents();
 
 export {
   ErrorBoundary,
@@ -23,6 +89,10 @@ SplashScreen.preventAutoHideAsync();
 export default function RootLayout() {
   const [loaded, error] = useFonts({
     SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
+    'LexendDeca-Regular': LexendDeca_400Regular,
+    'LexendDeca-Medium': LexendDeca_500Medium,
+    'LexendDeca-SemiBold': LexendDeca_600SemiBold,
+    'LexendDeca-Bold': LexendDeca_700Bold,
   });
 
   useEffect(() => {
