@@ -10,73 +10,57 @@ import {
   RefreshControl,
   SafeAreaView,
   Animated,
+  Dimensions,
+  Modal,
 } from 'react-native';
 import { FontAwesome } from '@expo/vector-icons';
 import api from '../../services/api';
-import { Wallet } from '../../types';
+import { Wallet, Transaction } from '../../types';
 import { useAuthStore } from '../../store/authStore';
 import { formatCurrency } from '../../utils/currency';
 import CustomAlert from '../../components/CustomAlert';
 import { useThemeColors } from '../../hooks/useThemeColors';
+import { useRouter } from 'expo-router';
 
+// Solar Icons imports
+import {
+  Dollar,
+  Home2,
+  Bag,
+  Widget,
+  AddCircle,
+} from '@solar-icons/react-native/Bold';
+
+const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 const COLORS = ['#10B981', '#3B82F6', '#8B5CF6', '#F59E0B', '#EF4444', '#EC4899'];
 const TYPES = [
   { label: 'Cash', value: 'cash', icon: 'money' },
   { label: 'Bank Account', value: 'bank', icon: 'bank' },
   { label: 'Mobile Wallet', value: 'mobile_wallet', icon: 'mobile' },
-  { label: 'Credit Card (Debt)', value: 'credit_card', icon: 'credit-card' },
+  { label: 'Credit Card', value: 'credit_card', icon: 'credit-card' },
   { label: 'Other', value: 'other', icon: 'question-circle' },
 ];
 
-function AnimatedFormCard({ children, colors }: any) {
-  const formOpacity = useRef(new Animated.Value(0)).current;
-  const formTranslateY = useRef(new Animated.Value(-15)).current;
-
-  useEffect(() => {
-    Animated.parallel([
-      Animated.timing(formOpacity, {
-        toValue: 1,
-        duration: 300,
-        useNativeDriver: true,
-      }),
-      Animated.timing(formTranslateY, {
-        toValue: 0,
-        duration: 300,
-        useNativeDriver: true,
-      })
-    ]).start();
-  }, []);
-
-  return (
-    <Animated.View style={{ opacity: formOpacity, transform: [{ translateY: formTranslateY }] }}>
-      <View style={[styles.formCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-        {children}
-      </View>
-    </Animated.View>
-  );
+interface WalletCardItemProps {
+  wallet: Wallet;
+  isActive: boolean;
+  onSelect: () => void;
+  handleStartEditWallet: (w: Wallet) => void;
+  handleDeleteWallet: (w: Wallet) => void;
+  colors: any;
+  isDark: boolean;
 }
 
-function WalletCardItem({ wallet, index, handleStartEditWallet, handleDeleteWallet, colors, user }: any) {
-  const cardFade = useRef(new Animated.Value(0)).current;
-  const cardSlide = useRef(new Animated.Value(25)).current;
+function WalletCardItem({
+  wallet,
+  isActive,
+  onSelect,
+  handleStartEditWallet,
+  handleDeleteWallet,
+  colors,
+  isDark,
+}: WalletCardItemProps) {
   const cardScale = useRef(new Animated.Value(1)).current;
-
-  useEffect(() => {
-    Animated.parallel([
-      Animated.timing(cardFade, {
-        toValue: 1,
-        duration: 500,
-        delay: index * 80,
-        useNativeDriver: true,
-      }),
-      Animated.timing(cardSlide, {
-        toValue: 0,
-        duration: 500,
-        delay: index * 80,
-        useNativeDriver: true,
-      })
-    ]).start();
-  }, []);
 
   const animatePress = () => {
     Animated.sequence([
@@ -90,83 +74,67 @@ function WalletCardItem({ wallet, index, handleStartEditWallet, handleDeleteWall
         friction: 3,
         tension: 40,
         useNativeDriver: true,
-      })
+      }),
     ]).start();
+    onSelect();
   };
 
-  const isCreditCard = wallet.type === 'credit_card';
-  const limit = wallet.creditLimit || 0;
-  const remainingCredit = limit + Number(wallet.balance);
-  const currentDebt = -Number(wallet.balance);
+  const idStr = wallet._id || '1234567890123456';
+  const lastFour = idStr.substring(idStr.length - 4);
+  const cardNumber = `1234  ••••  ••••  ${lastFour}`;
+
+  const cardBg = isDark ? '#1E293B' : '#FFFFFF';
+  const footerBg = isDark ? '#0F172A' : '#1E293B';
 
   return (
-    <Animated.View style={{ opacity: cardFade, transform: [{ translateY: cardSlide }, { scale: cardScale }] }}>
+    <Animated.View style={{ transform: [{ scale: cardScale }] }}>
       <TouchableOpacity
         activeOpacity={0.9}
         onPress={animatePress}
-        style={[styles.walletCard, { backgroundColor: wallet.color }]}
+        style={[
+          styles.walletCard,
+          {
+            backgroundColor: cardBg,
+            borderColor: isActive ? '#8B5CF6' : colors.border,
+            borderWidth: isActive ? 2.5 : 1,
+          },
+        ]}
       >
-        <View style={styles.cardHeader}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-            <View style={styles.cardIconWrapper}>
-              <FontAwesome
-                name={
-                  wallet.type === 'bank'
-                    ? 'bank'
-                    : wallet.type === 'mobile_wallet'
-                    ? 'mobile'
-                    : wallet.type === 'credit_card'
-                    ? 'credit-card'
-                    : 'money'
-                }
-                size={14}
-                color="#FFFFFF"
-              />
-            </View>
-            <Text style={styles.cardTypeLabel}>
-              {wallet.type.replace('_', ' ').toUpperCase()}
+        {/* Card Top */}
+        <View style={styles.cardTop}>
+          <View>
+            <Text style={[styles.cardTotalLabel, { color: isDark ? '#94A3B8' : '#64748B' }]}>Total Balance</Text>
+            <Text style={[styles.cardBalanceText, { color: isDark ? '#FFFFFF' : '#0F172A' }]}>
+              {formatCurrency(wallet.balance, wallet.currency)}
             </Text>
           </View>
-          <View style={{ flexDirection: 'row', gap: 12 }}>
-            <TouchableOpacity onPress={() => handleStartEditWallet(wallet)}>
-              <FontAwesome name="pencil" size={14} color="#FFFFFF" style={{ opacity: 0.8 }} />
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => handleDeleteWallet(wallet)}>
-              <FontAwesome name="trash" size={14} color="#FFFFFF" style={{ opacity: 0.8 }} />
-            </TouchableOpacity>
+          <View style={styles.logoContainer}>
+            <Text style={[styles.logoText, { color: isDark ? '#94A3B8' : '#94A3B8' }]}>LOGO</Text>
           </View>
         </View>
 
-        {isCreditCard ? (
-          <View style={styles.creditCardData}>
-            <View>
-              <Text style={styles.creditSubLabel}>Available Credit</Text>
-              <Text style={styles.cardBalance}>
-                {formatCurrency(remainingCredit, wallet.currency)}
-              </Text>
-            </View>
-            <View style={styles.creditDetailsRow}>
-              <View>
-                <Text style={styles.creditSubLabelSmall}>Total Limit</Text>
-                <Text style={styles.creditDetailVal}>
-                  {formatCurrency(limit, wallet.currency)}
-                </Text>
-              </View>
-              <View style={{ alignItems: 'flex-end' }}>
-                <Text style={styles.creditSubLabelSmall}>Current Debt</Text>
-                <Text style={[styles.creditDetailVal, { color: '#FEE2E2' }]}>
-                  {formatCurrency(currentDebt, wallet.currency)}
-                </Text>
-              </View>
-            </View>
-          </View>
-        ) : (
-          <Text style={styles.cardBalance}>
-            {formatCurrency(wallet.balance, wallet.currency)}
+        {/* Card Middle */}
+        <View style={styles.cardMiddle}>
+          <Text style={[styles.cardNumberText, { color: isDark ? '#E2E8F0' : '#475569' }]}>
+            {cardNumber}
           </Text>
-        )}
+        </View>
 
-        <Text style={styles.cardName}>{wallet.name}</Text>
+        {/* Card Bottom Strip */}
+        <View style={[styles.cardFooterStrip, { backgroundColor: footerBg }]}>
+          <View>
+            <Text style={styles.footerLabel}>Name</Text>
+            <Text style={styles.footerName}>{wallet.name}</Text>
+          </View>
+          <View style={styles.footerActions}>
+            <TouchableOpacity style={styles.footerActionBtn} onPress={() => handleStartEditWallet(wallet)}>
+              <FontAwesome name="pencil" size={14} color="#FFFFFF" />
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.footerActionBtn} onPress={() => handleDeleteWallet(wallet)}>
+              <FontAwesome name="trash" size={14} color="#FFFFFF" />
+            </TouchableOpacity>
+          </View>
+        </View>
       </TouchableOpacity>
     </Animated.View>
   );
@@ -175,9 +143,13 @@ function WalletCardItem({ wallet, index, handleStartEditWallet, handleDeleteWall
 export default function WalletsScreen() {
   const { colors, isDark } = useThemeColors();
   const [wallets, setWallets] = useState<Wallet[]>([]);
+  const [selectedWalletId, setSelectedWalletId] = useState<string | null>(null);
+  const [walletTransactions, setWalletTransactions] = useState<Transaction[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [loadingTransactions, setLoadingTransactions] = useState(false);
   const { user } = useAuthStore();
+  const router = useRouter();
 
   // Add/Edit Wallet Form State
   const [isAdding, setIsAdding] = useState(false);
@@ -189,6 +161,9 @@ export default function WalletsScreen() {
   const [selectedType, setSelectedType] = useState('bank');
   const [formError, setFormError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Bottom Sheet Slide Animation
+  const slideAnim = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
 
   // Custom Alert Popups State
   const [alertDialog, setAlertDialog] = useState({
@@ -226,7 +201,11 @@ export default function WalletsScreen() {
     try {
       const res = await api.get('/wallets');
       if (res.data.success) {
-        setWallets(res.data.data);
+        const walletsData = res.data.data;
+        setWallets(walletsData);
+        if (walletsData.length > 0 && !selectedWalletId) {
+          setSelectedWalletId(walletsData[0]._id);
+        }
       }
     } catch (err) {
       console.error('Error fetching wallets:', err);
@@ -236,13 +215,57 @@ export default function WalletsScreen() {
     }
   };
 
+  const fetchWalletTransactions = async (walletId: string) => {
+    setLoadingTransactions(true);
+    try {
+      const res = await api.get(`/transactions?walletId=${walletId}&limit=20`);
+      if (res.data.success) {
+        setWalletTransactions(res.data.data);
+      }
+    } catch (err) {
+      console.error('Error fetching wallet transactions:', err);
+    } finally {
+      setLoadingTransactions(false);
+    }
+  };
+
   useEffect(() => {
     fetchWallets();
   }, []);
 
+  useEffect(() => {
+    if (selectedWalletId) {
+      fetchWalletTransactions(selectedWalletId);
+    } else {
+      setWalletTransactions([]);
+    }
+  }, [selectedWalletId]);
+
   const onRefresh = () => {
     setRefreshing(true);
     fetchWallets();
+    if (selectedWalletId) {
+      fetchWalletTransactions(selectedWalletId);
+    }
+  };
+
+  const openBottomSheet = () => {
+    setIsAdding(true);
+    Animated.timing(slideAnim, {
+      toValue: 0,
+      duration: 350,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const closeBottomSheet = () => {
+    Animated.timing(slideAnim, {
+      toValue: SCREEN_HEIGHT,
+      duration: 300,
+      useNativeDriver: true,
+    }).start(() => {
+      resetForm();
+    });
   };
 
   const handleAddWallet = async () => {
@@ -276,9 +299,13 @@ export default function WalletsScreen() {
       }
 
       if (response.data.success) {
-        resetForm();
+        closeBottomSheet();
         fetchWallets();
-        triggerAlert('Success', editingWalletId ? 'Wallet updated successfully!' : 'New Wallet created successfully!', 'success');
+        triggerAlert(
+          'Success',
+          editingWalletId ? 'Wallet updated successfully!' : 'New Wallet created successfully!',
+          'success'
+        );
       }
     } catch (err: any) {
       setFormError(err.response?.data?.error || 'Failed to save wallet');
@@ -294,7 +321,7 @@ export default function WalletsScreen() {
     setCreditLimit(wallet.creditLimit?.toString() || '');
     setSelectedColor(wallet.color);
     setSelectedType(wallet.type);
-    setIsAdding(true);
+    openBottomSheet();
   };
 
   const handleDeleteWallet = (wallet: Wallet) => {
@@ -305,6 +332,9 @@ export default function WalletsScreen() {
         try {
           const res = await api.delete(`/wallets/${wallet._id}`);
           if (res.data.success) {
+            if (selectedWalletId === wallet._id) {
+              setSelectedWalletId(null);
+            }
             fetchWallets();
           }
         } catch (err) {
@@ -324,6 +354,20 @@ export default function WalletsScreen() {
     setIsAdding(false);
   };
 
+  const getCategoryIcon = (categoryName: string) => {
+    const name = categoryName.toLowerCase();
+    if (name.includes('salary') || name.includes('income') || name.includes('paycheck') || name.includes('freelance')) {
+      return <Dollar size={18} color="#10B981" />;
+    }
+    if (name.includes('rent') || name.includes('home') || name.includes('house') || name.includes('utility') || name.includes('bill')) {
+      return <Home2 size={18} color="#3B82F6" />;
+    }
+    if (name.includes('shop') || name.includes('grocery') || name.includes('food') || name.includes('dining')) {
+      return <Bag size={18} color="#EC4899" />;
+    }
+    return <Widget size={18} color="#8B5CF6" />;
+  };
+
   if (isLoading) {
     return (
       <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
@@ -340,151 +384,232 @@ export default function WalletsScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#10B981" />
         }
       >
-        <View style={styles.headerRow}>
-          <Text style={[styles.title, { color: colors.text }]}>My Wallets</Text>
+        {/* Header */}
+        <Text style={[styles.headerTitle, { color: colors.text }]}>Wallet</Text>
+
+        {/* Wallets Horizontal card scroll section */}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.walletsHorizontalScroll}
+        >
+          {/* Add Wallet dashed button */}
           <TouchableOpacity
-            style={styles.addButton}
-            onPress={() => {
-              setIsAdding(!isAdding);
-              setFormError('');
-            }}
+            style={[styles.addDashedButton, { borderColor: colors.border }]}
+            onPress={openBottomSheet}
           >
-            <FontAwesome name={isAdding ? 'close' : 'plus'} size={14} color="#FFFFFF" />
-            <Text style={styles.addButtonText}> {isAdding ? 'Cancel' : 'Add New'}</Text>
+            <AddCircle size={28} color={isDark ? '#94A3B8' : '#475569'} />
+          </TouchableOpacity>
+
+          {wallets.map((wallet) => (
+            <WalletCardItem
+              key={wallet._id}
+              wallet={wallet}
+              isActive={selectedWalletId === wallet._id}
+              onSelect={() => setSelectedWalletId(wallet._id)}
+              handleStartEditWallet={handleStartEditWallet}
+              handleDeleteWallet={handleDeleteWallet}
+              colors={colors}
+              isDark={isDark}
+            />
+          ))}
+        </ScrollView>
+
+        {/* Selected Wallet Transactions Header */}
+        <View style={styles.transactionsHeaderRow}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Transactions</Text>
+          <TouchableOpacity
+            style={[styles.slidersBtn, { backgroundColor: colors.card, borderColor: colors.border }]}
+            onPress={() => router.push('/transactions')}
+          >
+            <FontAwesome name="sliders" size={16} color={colors.text} />
           </TouchableOpacity>
         </View>
 
-        {/* Add Wallet Form */}
-        {isAdding ? (
-          <AnimatedFormCard colors={colors}>
-            <Text style={[styles.formTitle, { color: colors.text }]}>New Wallet Details</Text>
-            {formError ? <Text style={styles.errorText}>{formError}</Text> : null}
-
-            <View style={styles.inputGroup}>
-              <Text style={[styles.label, { color: colors.textSecondary }]}>Wallet Name</Text>
-              <TextInput
-                style={[styles.input, { backgroundColor: colors.inputBg, borderColor: colors.border, color: colors.text }]}
-                placeholder="e.g. Chase Bank, Pocket Cash"
-                placeholderTextColor="#94A3B8"
-                value={name}
-                onChangeText={setName}
-              />
-            </View>
-
-            <View style={styles.inputGroup}>
-              <Text style={[styles.label, { color: colors.textSecondary }]}>
-                {selectedType === 'credit_card' ? 'Current Debt (Starting spent amount)' : 'Initial Balance'}
-              </Text>
-              <TextInput
-                style={[styles.input, { backgroundColor: colors.inputBg, borderColor: colors.border, color: colors.text }]}
-                placeholder="0.00"
-                placeholderTextColor="#94A3B8"
-                keyboardType="numeric"
-                value={balance}
-                onChangeText={setBalance}
-              />
-            </View>
-
-            {/* Credit Limit Input for Credit Card type */}
-            {selectedType === 'credit_card' ? (
-              <View style={styles.inputGroup}>
-                <Text style={[styles.label, { color: colors.textSecondary }]}>Credit Limit</Text>
-                <TextInput
-                  style={[styles.input, { backgroundColor: colors.inputBg, borderColor: colors.border, color: colors.text }]}
-                  placeholder="e.g. 5000"
-                  placeholderTextColor="#94A3B8"
-                  keyboardType="numeric"
-                  value={creditLimit}
-                  onChangeText={setCreditLimit}
-                />
-              </View>
-            ) : null}
-
-            {/* Type Selector */}
-            <Text style={[styles.label, { color: colors.textSecondary }]}>Wallet Type</Text>
-            <View style={styles.typeGrid}>
-              {TYPES.map((t) => (
-                <TouchableOpacity
-                  key={t.value}
-                  style={[
-                    styles.typeSelector,
-                    { backgroundColor: colors.inputBg, borderColor: colors.border },
-                    selectedType === t.value && { backgroundColor: colors.primary, borderColor: colors.primary },
-                  ]}
-                  onPress={() => setSelectedType(t.value)}
-                >
-                  <FontAwesome
-                    name={t.icon as any}
-                    size={16}
-                    color={selectedType === t.value ? '#FFFFFF' : colors.textSecondary}
-                  />
-                  <Text
-                    style={[
-                      styles.typeSelectorText,
-                      { color: colors.textSecondary },
-                      selectedType === t.value && { color: '#FFFFFF', fontWeight: 'bold' },
-                    ]}
-                  >
-                    {t.label}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-
-            {/* Color Selector */}
-            <Text style={[styles.label, { color: colors.textSecondary }]}>Card Theme Color</Text>
-            <View style={styles.colorGrid}>
-              {COLORS.map((c) => (
-                <TouchableOpacity
-                  key={c}
-                  style={[
-                    styles.colorCircle,
-                    { backgroundColor: c },
-                    selectedColor === c && styles.colorCircleActive,
-                  ]}
-                  onPress={() => setSelectedColor(c)}
-                />
-              ))}
-            </View>
-
-            <TouchableOpacity
-              style={styles.submitButton}
-              onPress={handleAddWallet}
-              disabled={isSubmitting}
-            >
-              {isSubmitting ? (
-                <ActivityIndicator color="#FFFFFF" size="small" />
-              ) : (
-                <Text style={styles.submitButtonText}>
-                  {editingWalletId ? 'Update Wallet' : 'Create Wallet'}
-                </Text>
-              )}
-            </TouchableOpacity>
-          </AnimatedFormCard>
-        ) : null}
-
-        {/* Wallets Cards List */}
-        {wallets.length === 0 ? (
-          <View style={[styles.emptyContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
-            <FontAwesome name="credit-card" size={48} color={colors.textSecondary} />
-            <Text style={[styles.emptyText, { color: colors.textSecondary }]}>No wallets created yet.</Text>
+        {/* Transactions List */}
+        {loadingTransactions ? (
+          <ActivityIndicator size="small" color="#10B981" style={{ marginTop: 20 }} />
+        ) : walletTransactions.length === 0 ? (
+          <View style={[styles.emptyTxContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <Widget size={40} color={colors.textSecondary} />
+            <Text style={[styles.emptyTxText, { color: colors.textSecondary }]}>
+              No transactions recorded for this wallet.
+            </Text>
           </View>
         ) : (
-          <View style={styles.cardsList}>
-            {wallets.map((wallet, index) => (
-              <WalletCardItem
-                key={wallet._id}
-                wallet={wallet}
-                index={index}
-                handleStartEditWallet={handleStartEditWallet}
-                handleDeleteWallet={handleDeleteWallet}
-                colors={colors}
-                user={user}
-              />
-            ))}
+          <View style={styles.txListContainer}>
+            {walletTransactions.map((t) => {
+              const isIncome = t.type === 'income';
+              const isTransfer = t.type === 'transfer';
+              const symbol = isIncome ? '+' : isTransfer ? '' : '-';
+              const amountColor = isIncome ? '#10B981' : isTransfer ? '#3B82F6' : '#0F172A';
+              const typeLabel = isIncome ? 'Income' : isTransfer ? 'Transfer' : 'Outcome';
+
+              return (
+                <TouchableOpacity
+                  key={t._id}
+                  style={[styles.transactionCard, { backgroundColor: colors.card, borderColor: colors.border }]}
+                  onPress={() => router.push(`/modal?editId=${t._id}`)}
+                >
+                  <View style={[styles.iconWrapper, { backgroundColor: isDark ? '#334155' : '#F1F5F9', borderColor: colors.border }]}>
+                    {getCategoryIcon(t.categoryId?.name || '')}
+                  </View>
+                  <View style={styles.detailsContainer}>
+                    <Text style={[styles.txDescription, { color: colors.text }]}>{t.description || t.categoryId?.name}</Text>
+                    <Text style={[styles.txCategory, { color: colors.textSecondary }]}>
+                      {new Date(t.date).toLocaleDateString(undefined, { day: '2-digit', month: '2-digit', year: 'numeric' })} · {new Date(t.date).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', hour12: false })}
+                    </Text>
+                  </View>
+                  <View style={styles.amountContainer}>
+                    <Text style={[styles.txAmount, { color: isDark && !isIncome && !isTransfer ? '#FFFFFF' : amountColor }]}>
+                      {symbol}{formatCurrency(t.amount, user?.currency)}
+                    </Text>
+                    <Text style={[styles.txTypeLabel, { color: colors.textSecondary }]}>
+                      {typeLabel}
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+              );
+            })}
           </View>
         )}
       </ScrollView>
+
+      {/* Rise-from-bottom Sheet modal for adding/editing wallets */}
+      <Modal
+        visible={isAdding}
+        transparent
+        animationType="fade"
+        onRequestClose={closeBottomSheet}
+      >
+        <View style={styles.sheetOverlay}>
+          <TouchableOpacity
+            style={styles.sheetBackdrop}
+            activeOpacity={1}
+            onPress={closeBottomSheet}
+          />
+          <Animated.View
+            style={[
+              styles.sheetContent,
+              {
+                backgroundColor: colors.card,
+                transform: [{ translateY: slideAnim }],
+              },
+            ]}
+          >
+            {/* Grabber indicator */}
+            <View style={[styles.sheetGrabber, { backgroundColor: colors.border }]} />
+
+            <Text style={[styles.formTitle, { color: colors.text }]}>
+              {editingWalletId ? 'Edit Wallet Details' : 'New Wallet Details'}
+            </Text>
+            {formError ? <Text style={styles.errorText}>{formError}</Text> : null}
+
+            <ScrollView contentContainerStyle={{ paddingBottom: 30 }}>
+              <View style={styles.inputGroup}>
+                <Text style={[styles.label, { color: colors.textSecondary }]}>Wallet Name</Text>
+                <TextInput
+                  style={[styles.input, { backgroundColor: colors.inputBg, borderColor: colors.border, color: colors.text }]}
+                  placeholder="e.g. Chase Bank, Pocket Cash"
+                  placeholderTextColor="#94A3B8"
+                  value={name}
+                  onChangeText={setName}
+                />
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={[styles.label, { color: colors.textSecondary }]}>
+                  {selectedType === 'credit_card' ? 'Current Debt (Spent)' : 'Initial Balance'}
+                </Text>
+                <TextInput
+                  style={[styles.input, { backgroundColor: colors.inputBg, borderColor: colors.border, color: colors.text }]}
+                  placeholder="0.00"
+                  placeholderTextColor="#94A3B8"
+                  keyboardType="numeric"
+                  value={balance}
+                  onChangeText={setBalance}
+                />
+              </View>
+
+              {/* Credit Limit Input for Credit Card */}
+              {selectedType === 'credit_card' && (
+                <View style={styles.inputGroup}>
+                  <Text style={[styles.label, { color: colors.textSecondary }]}>Credit Limit</Text>
+                  <TextInput
+                    style={[styles.input, { backgroundColor: colors.inputBg, borderColor: colors.border, color: colors.text }]}
+                    placeholder="e.g. 5000"
+                    placeholderTextColor="#94A3B8"
+                    keyboardType="numeric"
+                    value={creditLimit}
+                    onChangeText={setCreditLimit}
+                  />
+                </View>
+              )}
+
+              {/* Type Grid Selector */}
+              <Text style={[styles.label, { color: colors.textSecondary }]}>Wallet Type</Text>
+              <View style={styles.typeGrid}>
+                {TYPES.map((t) => (
+                  <TouchableOpacity
+                    key={t.value}
+                    style={[
+                      styles.typeSelector,
+                      { backgroundColor: colors.inputBg, borderColor: colors.border },
+                      selectedType === t.value && { backgroundColor: '#8B5CF6', borderColor: '#8B5CF6' },
+                    ]}
+                    onPress={() => setSelectedType(t.value)}
+                  >
+                    <FontAwesome
+                      name={t.icon as any}
+                      size={14}
+                      color={selectedType === t.value ? '#FFFFFF' : colors.textSecondary}
+                    />
+                    <Text
+                      style={[
+                        styles.typeSelectorText,
+                        { color: colors.textSecondary },
+                        selectedType === t.value && { color: '#FFFFFF', fontWeight: 'bold' },
+                      ]}
+                    >
+                      {t.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              {/* Color Grid Selector */}
+              <Text style={[styles.label, { color: colors.textSecondary }]}>Card Theme Color</Text>
+              <View style={styles.colorGrid}>
+                {COLORS.map((c) => (
+                  <TouchableOpacity
+                    key={c}
+                    style={[
+                      styles.colorCircle,
+                      { backgroundColor: c },
+                      selectedColor === c && styles.colorCircleActive,
+                    ]}
+                    onPress={() => setSelectedColor(c)}
+                  />
+                ))}
+              </View>
+
+              <TouchableOpacity
+                style={styles.submitButton}
+                onPress={handleAddWallet}
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? (
+                  <ActivityIndicator color="#FFFFFF" size="small" />
+                ) : (
+                  <Text style={styles.submitButtonText}>
+                    {editingWalletId ? 'Update Wallet' : 'Create Wallet'}
+                  </Text>
+                )}
+              </TouchableOpacity>
+            </ScrollView>
+          </Animated.View>
+        </View>
+      </Modal>
 
       <CustomAlert
         visible={alertDialog.visible}
@@ -492,7 +617,7 @@ export default function WalletsScreen() {
         title={alertDialog.title}
         message={alertDialog.message}
         severity={alertDialog.severity}
-        onClose={() => setAlertDialog(prev => ({ ...prev, visible: false }))}
+        onClose={() => setAlertDialog((prev) => ({ ...prev, visible: false }))}
         onConfirm={alertDialog.onConfirm}
       />
     </SafeAreaView>
@@ -502,85 +627,235 @@ export default function WalletsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
   },
   scrollContainer: {
-    padding: 20,
     paddingBottom: 110,
   },
   loadingContainer: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  headerRow: {
+  headerTitle: {
+    fontSize: 22,
+    fontWeight: '700',
+    paddingHorizontal: 24,
+    paddingTop: 24,
+    paddingBottom: 16,
+    textAlign: 'center',
+  },
+  walletsHorizontalScroll: {
+    paddingLeft: 24,
+    paddingRight: 12,
+    paddingBottom: 16,
+    gap: 12,
+  },
+  addDashedButton: {
+    width: 64,
+    height: 160,
+    borderRadius: 24,
+    borderWidth: 2,
+    borderStyle: 'dashed',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  walletCard: {
+    width: 270,
+    height: 160,
+    borderRadius: 24,
+    borderWidth: 1,
+    overflow: 'hidden',
+    justifyContent: 'space-between',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.04,
+    shadowRadius: 12,
+    elevation: 3,
+  },
+  cardTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingTop: 18,
+  },
+  cardTotalLabel: {
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  cardBalanceText: {
+    fontSize: 22,
+    fontWeight: '700',
+    marginTop: 4,
+  },
+  logoContainer: {
+    justifyContent: 'center',
+  },
+  logoText: {
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 1,
+  },
+  cardMiddle: {
+    paddingHorizontal: 20,
+    marginVertical: 4,
+  },
+  cardNumberText: {
+    fontSize: 14,
+    letterSpacing: 1,
+    fontWeight: '500',
+  },
+  cardFooterStrip: {
+    height: 48,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 24,
-    marginTop: 16,
+    paddingHorizontal: 20,
   },
-  title: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: '#0F172A',
+  footerLabel: {
+    color: '#94A3B8',
+    fontSize: 9,
+    fontWeight: '600',
   },
-  addButton: {
-    flexDirection: 'row',
-    backgroundColor: '#059669',
-    paddingVertical: 8,
-    paddingHorizontal: 14,
-    borderRadius: 12,
-    alignItems: 'center',
-  },
-  addButtonText: {
+  footerName: {
     color: '#FFFFFF',
-    fontWeight: 'bold',
     fontSize: 13,
+    fontWeight: '700',
   },
-  formCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    padding: 20,
-    marginBottom: 24,
+  footerActions: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  footerActionBtn: {
+    padding: 6,
+  },
+  transactionsHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+    marginTop: 16,
+    marginBottom: 16,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+  },
+  slidersBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.03,
-    shadowRadius: 10,
-    elevation: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyTxContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 32,
+    marginHorizontal: 24,
+    borderRadius: 20,
+    borderWidth: 1,
+  },
+  emptyTxText: {
+    fontSize: 12,
+    marginTop: 8,
+    fontWeight: '500',
+  },
+  txListContainer: {
+    paddingHorizontal: 24,
+  },
+  transactionCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: 18,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    marginBottom: 10,
+    borderWidth: 1,
+  },
+  iconWrapper: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 14,
+  },
+  detailsContainer: {
+    flex: 1,
+  },
+  txDescription: {
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  txCategory: {
+    fontSize: 11,
+  },
+  amountContainer: {
+    alignItems: 'flex-end',
+  },
+  txAmount: {
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  txTypeLabel: {
+    fontSize: 10,
+    marginTop: 4,
+  },
+  sheetOverlay: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+  },
+  sheetBackdrop: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+  sheetContent: {
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    paddingHorizontal: 24,
+    paddingTop: 12,
+    maxHeight: '85%',
+  },
+  sheetGrabber: {
+    width: 40,
+    height: 4.5,
+    borderRadius: 3,
+    alignSelf: 'center',
+    marginBottom: 20,
   },
   formTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#0F172A',
-    marginBottom: 16,
+    fontSize: 18,
+    fontWeight: '700',
+    textAlign: 'center',
+    marginBottom: 18,
   },
   errorText: {
     color: '#EF4444',
     fontSize: 13,
     marginBottom: 12,
     fontWeight: '500',
+    textAlign: 'center',
   },
   inputGroup: {
     marginBottom: 16,
   },
   label: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '600',
-    color: '#475569',
     marginBottom: 8,
   },
   input: {
-    backgroundColor: '#F8FAFC',
     borderRadius: 12,
     height: 48,
     paddingHorizontal: 14,
-    color: '#0F172A',
     borderWidth: 1,
-    borderColor: '#E2E8F0',
     fontSize: 15,
   },
   typeGrid: {
@@ -591,8 +866,6 @@ const styles = StyleSheet.create({
   },
   typeSelector: {
     flexDirection: 'row',
-    backgroundColor: '#F8FAFC',
-    borderColor: '#E2E8F0',
     borderWidth: 1,
     borderRadius: 10,
     paddingVertical: 8,
@@ -600,23 +873,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     margin: 4,
   },
-  typeSelectorActive: {
-    backgroundColor: '#059669',
-    borderColor: '#059669',
-  },
   typeSelectorText: {
-    color: '#475569',
     fontSize: 12,
     fontWeight: '500',
     marginLeft: 6,
   },
-  typeSelectorTextActive: {
-    color: '#FFFFFF',
-  },
   colorGrid: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 20,
+    marginBottom: 24,
     marginTop: 4,
   },
   colorCircle: {
@@ -629,109 +894,21 @@ const styles = StyleSheet.create({
     borderColor: '#FFFFFF',
   },
   submitButton: {
-    backgroundColor: '#059669',
+    backgroundColor: '#8B5CF6',
     borderRadius: 12,
     height: 48,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#059669',
+    shadowColor: '#8B5CF6',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.15,
     shadowRadius: 8,
     elevation: 4,
+    marginTop: 10,
   },
   submitButtonText: {
     color: '#FFFFFF',
     fontWeight: 'bold',
     fontSize: 15,
-  },
-  cardsList: {
-    gap: 16,
-  },
-  walletCard: {
-    borderRadius: 24,
-    padding: 24,
-    minHeight: 160,
-    justifyContent: 'space-between',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
-    elevation: 4,
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  cardIconWrapper: {
-    width: 36,
-    height: 36,
-    borderRadius: 12,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  cardTypeLabel: {
-    color: '#FFFFFF',
-    fontSize: 10,
-    fontWeight: 'bold',
-    letterSpacing: 1,
-    opacity: 0.8,
-  },
-  cardBalance: {
-    color: '#FFFFFF',
-    fontSize: 28,
-    fontWeight: 'bold',
-    marginVertical: 4,
-  },
-  cardName: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
-    opacity: 0.9,
-    marginTop: 8,
-  },
-  emptyContainer: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    padding: 40,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-  },
-  emptyText: {
-    color: '#64748B',
-    fontSize: 14,
-    marginTop: 12,
-  },
-  creditCardData: {
-    marginVertical: 8,
-  },
-  creditSubLabel: {
-    color: '#FFFFFF',
-    fontSize: 11,
-    opacity: 0.7,
-    fontWeight: '600',
-  },
-  creditSubLabelSmall: {
-    color: '#FFFFFF',
-    fontSize: 10,
-    opacity: 0.7,
-    fontWeight: '500',
-  },
-  creditDetailsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 10,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255, 255, 255, 0.15)',
-    paddingTop: 8,
-  },
-  creditDetailVal: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: 'bold',
-    marginTop: 2,
   },
 });
