@@ -21,29 +21,45 @@ import { useThemeColors } from '../hooks/useThemeColors';
 
 // Import all Bold Solar Icons
 import * as SolarBold from '@solar-icons/react-native/Bold';
-import { AltArrowLeft, AddCircle } from '@solar-icons/react-native/Bold';
+import {
+  AltArrowLeft,
+  AddCircle,
+  Bus,
+  Home,
+  HandMoney,
+  Hospital,
+  CaseRoundMinimalistic,
+  HeartPulse2,
+  Pills,
+  Masks,
+  MaskHappy,
+  Monitor,
+  CartLarge,
+  Box,
+  Cup,
+} from '@solar-icons/react-native/Bold';
 
-const { height: SCREEN_HEIGHT } = Dimensions.get('window');
+const { height: SCREEN_HEIGHT, width: SCREEN_WIDTH } = Dimensions.get('window');
 const COLORS = ['#10B981', '#3B82F6', '#8B5CF6', '#F59E0B', '#EF4444', '#EC4899', '#14B8A6', '#6366F1'];
 
-// Available Solar Icons names for categories selection
+// Expanded Solar Icons as requested by the user
 const SOLAR_ICONS = [
+  'Bus',
+  'Home',
+  'HandMoney',
+  'Hospital',
+  'CaseRoundMinimalistic',
+  'HeartPulse2',
+  'Pills',
+  'Masks',
+  'MaskHappy',
+  'Monitor',
+  'CartLarge',
+  'Box',
+  'Cup',
   'Dollar',
-  'Home2',
-  'Bag',
   'Widget',
-  'AddCircle',
   'Folder',
-  'Wallet',
-  'Settings',
-  'Star',
-  'Heart',
-  'Notes',
-  'Bill',
-  'User',
-  'Bell',
-  'Moon',
-  'Sun',
 ];
 
 export default function CategoriesScreen() {
@@ -51,6 +67,7 @@ export default function CategoriesScreen() {
   const router = useRouter();
   const [categories, setCategories] = useState<Category[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<'expense' | 'income'>('expense');
 
   // Form State
   const [isAdding, setIsAdding] = useState(false);
@@ -144,11 +161,10 @@ export default function CategoriesScreen() {
         name: name.trim(),
         type,
         color: selectedColor,
-        emoji: selectedIcon, // Save selected Solar Icon name in the emoji field for backward compatibility
+        emoji: selectedIcon,
       };
 
       if (editingId) {
-        // Update Custom Category
         const response = await api.put(`/categories/${editingId}`, payload);
         if (response.data.success) {
           closeBottomSheet();
@@ -156,7 +172,6 @@ export default function CategoriesScreen() {
           triggerAlert('Success', 'Category updated successfully!', 'success');
         }
       } else {
-        // Create Custom Category
         const response = await api.post('/categories', payload);
         if (response.data.success) {
           closeBottomSheet();
@@ -211,9 +226,10 @@ export default function CategoriesScreen() {
     if (IconComponent) {
       return <IconComponent size={size} color={iconColor} />;
     }
-    // Fallback to a default Widget icon if the stored value is an old emoji or invalid
     return <SolarBold.Widget size={size} color={iconColor} />;
   };
+
+  const filteredCategories = categories.filter((c) => c.type === activeTab);
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
@@ -238,65 +254,72 @@ export default function CategoriesScreen() {
         onConfirm={alertDialog.onConfirm}
       />
 
+      {/* Tabs Row (Income | Expense) */}
+      <View style={[styles.tabsContainer, { borderBottomColor: colors.border }]}>
+        <TouchableOpacity
+          style={[styles.tabButton, activeTab === 'expense' && [styles.tabButtonActive, { borderBottomColor: '#EF4444' }]]}
+          onPress={() => setActiveTab('expense')}
+        >
+          <Text style={[styles.tabText, activeTab === 'expense' && { color: '#EF4444', fontWeight: 'bold' }]}>
+            Expense
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.tabButton, activeTab === 'income' && [styles.tabButtonActive, { borderBottomColor: '#10B981' }]]}
+          onPress={() => setActiveTab('income')}
+        >
+          <Text style={[styles.tabText, activeTab === 'income' && { color: '#10B981', fontWeight: 'bold' }]}>
+            Income
+          </Text>
+        </TouchableOpacity>
+      </View>
+
       {isLoading ? (
         <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
           <ActivityIndicator size="large" color="#059669" />
         </View>
       ) : (
         <ScrollView contentContainerStyle={styles.scrollContainer} keyboardShouldPersistTaps="handled">
-          {/* EXPENSE CATEGORIES */}
-          <Text style={[styles.sectionSubtitle, { color: colors.textSecondary }]}>Expense Categories</Text>
-          {categories.filter(c => c.type === 'expense').map((cat) => (
-            <View key={cat._id} style={[styles.categoryRow, { backgroundColor: colors.card, borderColor: colors.border }]}>
-              <View style={styles.catInfo}>
-                <View style={[styles.catIconWrapper, { backgroundColor: cat.color ? `${cat.color}15` : (isDark ? '#334155' : '#F1F5F9') }]}>
-                  {renderCategoryIcon(cat.emoji || 'Widget', cat.color || '#8B5CF6')}
-                </View>
-                <View>
-                  <Text style={[styles.catName, { color: colors.text }]}>{cat.name}</Text>
-                  <Text style={[styles.catMeta, { color: colors.textSecondary }]}>
-                    {cat.userId ? 'Custom' : 'System Default'}
+          {filteredCategories.length === 0 ? (
+            <View style={[styles.emptyContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
+              <Text style={{ color: colors.textSecondary }}>No categories configured yet.</Text>
+            </View>
+          ) : (
+            <View style={styles.gridContainer}>
+              {filteredCategories.map((cat) => (
+                <View
+                  key={cat._id}
+                  style={[styles.gridItem, { backgroundColor: colors.card, borderColor: colors.border }]}
+                >
+                  {/* Action Shortcuts */}
+                  <TouchableOpacity
+                    style={styles.gridEditBtn}
+                    onPress={() => handleStartEdit(cat)}
+                  >
+                    <FontAwesome name="pencil" size={10} color={colors.textSecondary} />
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={styles.gridDeleteBtn}
+                    onPress={() => handleDeleteCategory(cat)}
+                  >
+                    <FontAwesome name="trash" size={10} color="#EF4444" />
+                  </TouchableOpacity>
+
+                  {/* Icon Wrapper */}
+                  <View style={[styles.catIconWrapper, { backgroundColor: cat.color ? `${cat.color}15` : (isDark ? '#334155' : '#F1F5F9') }]}>
+                    {renderCategoryIcon(cat.emoji || 'Widget', cat.color || '#8B5CF6', 22)}
+                  </View>
+
+                  {/* Category Name */}
+                  <Text style={[styles.catName, { color: colors.text }]} numberOfLines={1}>
+                    {cat.name}
                   </Text>
                 </View>
-              </View>
-              
-              <View style={styles.actions}>
-                <TouchableOpacity style={styles.actionIcon} onPress={() => handleStartEdit(cat)}>
-                  <FontAwesome name="edit" size={15} color="#059669" />
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.actionIcon} onPress={() => handleDeleteCategory(cat)}>
-                  <FontAwesome name="trash" size={15} color="#EF4444" />
-                </TouchableOpacity>
-              </View>
+              ))}
             </View>
-          ))}
-
-          {/* INCOME CATEGORIES */}
-          <Text style={[styles.sectionSubtitle, { color: colors.textSecondary, marginTop: 24 }]}>Income Categories</Text>
-          {categories.filter(c => c.type === 'income').map((cat) => (
-            <View key={cat._id} style={[styles.categoryRow, { backgroundColor: colors.card, borderColor: colors.border }]}>
-              <View style={styles.catInfo}>
-                <View style={[styles.catIconWrapper, { backgroundColor: cat.color ? `${cat.color}15` : (isDark ? '#334155' : '#F1F5F9') }]}>
-                  {renderCategoryIcon(cat.emoji || 'Widget', cat.color || '#8B5CF6')}
-                </View>
-                <View>
-                  <Text style={[styles.catName, { color: colors.text }]}>{cat.name}</Text>
-                  <Text style={[styles.catMeta, { color: colors.textSecondary }]}>
-                    {cat.userId ? 'Custom' : 'System Default'}
-                  </Text>
-                </View>
-              </View>
-
-              <View style={styles.actions}>
-                <TouchableOpacity style={styles.actionIcon} onPress={() => handleStartEdit(cat)}>
-                  <FontAwesome name="edit" size={15} color="#059669" />
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.actionIcon} onPress={() => handleDeleteCategory(cat)}>
-                  <FontAwesome name="trash" size={15} color="#EF4444" />
-                </TouchableOpacity>
-              </View>
-            </View>
-          ))}
+          )}
         </ScrollView>
       )}
 
@@ -458,32 +481,61 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  tabsContainer: {
+    flexDirection: 'row',
+    borderBottomWidth: 1,
+    height: 48,
+  },
+  tabButton: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderBottomWidth: 2,
+    borderBottomColor: 'transparent',
+  },
+  tabButtonActive: {
+    borderBottomWidth: 3,
+  },
+  tabText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#64748B',
+  },
   scrollContainer: {
-    padding: 24,
+    padding: 20,
     paddingBottom: 40,
   },
-  sectionSubtitle: {
-    fontSize: 15,
-    fontWeight: '700',
-    marginBottom: 12,
-  },
-  categoryRow: {
+  gridContainer: {
     flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    borderRadius: 18,
-    padding: 14,
-    marginBottom: 10,
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  gridItem: {
+    width: (SCREEN_WIDTH - 40 - 24) / 4,
+    height: 110,
+    borderRadius: 16,
     borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+    padding: 8,
     shadowColor: '#000000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.02,
-    shadowRadius: 8,
+    shadowRadius: 6,
     elevation: 2,
   },
-  catInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  gridEditBtn: {
+    position: 'absolute',
+    top: 8,
+    left: 8,
+    padding: 4,
+  },
+  gridDeleteBtn: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    padding: 4,
   },
   catIconWrapper: {
     width: 44,
@@ -491,30 +543,26 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 14,
     shadowColor: '#000000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 4,
     elevation: 1,
+    marginTop: 10,
   },
   catName: {
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  catMeta: {
     fontSize: 11,
-    marginTop: 2,
+    fontWeight: '700',
+    marginTop: 8,
+    textAlign: 'center',
   },
-  actions: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  actionIcon: {
-    padding: 8,
-    borderRadius: 10,
+  emptyContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 60,
+    borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderStyle: 'dashed',
   },
   sheetOverlay: {
     flex: 1,
