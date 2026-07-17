@@ -1,29 +1,73 @@
-import { Tabs, Link } from 'expo-router';
-import { Pressable, StyleSheet, View, Text, TouchableOpacity, Animated } from 'react-native';
+import { Tabs, useRouter } from 'expo-router';
+import { StyleSheet, View, Text, TouchableOpacity, Animated } from 'react-native';
 import { FontAwesome } from '@expo/vector-icons';
 import React, { useEffect, useRef } from 'react';
 import { useThemeColors } from '../../hooks/useThemeColors';
 
-function TabItem({ label, isFocused, onPress, onLongPress, iconName }: any) {
-  const { colors } = useThemeColors();
-  const scaleValue = useRef(new Animated.Value(isFocused ? 1.12 : 1)).current;
-  const opacityValue = useRef(new Animated.Value(isFocused ? 1 : 0.65)).current;
+// Solar Icons
+import * as SolarBold from '@solar-icons/react-native/Bold';
+import {
+  Home2,
+  Wallet,
+  BellBing,
+  User,
+} from '@solar-icons/react-native/Bold';
+
+function TabItem({ label, isFocused, onPress, onLongPress, routeName, isDark }: any) {
+  const scaleValue = useRef(new Animated.Value(isFocused ? 1.08 : 1)).current;
+  const opacityValue = useRef(new Animated.Value(isFocused ? 1 : 0.55)).current;
 
   useEffect(() => {
     Animated.parallel([
       Animated.spring(scaleValue, {
-        toValue: isFocused ? 1.12 : 1,
+        toValue: isFocused ? 1.08 : 1,
         useNativeDriver: true,
-        tension: 60,
-        friction: 7,
+        tension: 50,
+        friction: 6,
       }),
       Animated.timing(opacityValue, {
-        toValue: isFocused ? 1 : 0.65,
+        toValue: isFocused ? 1 : 0.55,
         duration: 150,
         useNativeDriver: true,
       }),
     ]).start();
   }, [isFocused]);
+
+  if (routeName === 'add-placeholder') {
+    return (
+      <TouchableOpacity
+        accessibilityRole="button"
+        onPress={onPress}
+        style={styles.centerTabContainer}
+      >
+        <View style={styles.floatingCenterButton}>
+          <FontAwesome name="plus" size={20} color="#1E293B" />
+        </View>
+        <Text style={[styles.centerTabLabel, { color: 'rgba(255, 255, 255, 0.75)' }]}>
+          {label}
+        </Text>
+      </TouchableOpacity>
+    );
+  }
+
+  const renderIcon = (color: string) => {
+    switch (routeName) {
+      case 'index':
+        return <Home2 size={22} color={color} />;
+      case 'two':
+        return <Wallet size={22} color={color} />;
+      case 'notifications-placeholder':
+        return <BellBing size={22} color={color} />;
+      case 'profile':
+        return <User size={22} color={color} />;
+      default:
+        return <User size={22} color={color} />;
+    }
+  };
+
+  const activeColor = '#FFFFFF';
+  const inactiveColor = 'rgba(255, 255, 255, 0.55)';
+  const activeTextColor = '#C5D2FF';
 
   return (
     <TouchableOpacity
@@ -34,12 +78,8 @@ function TabItem({ label, isFocused, onPress, onLongPress, iconName }: any) {
       style={styles.tabItem}
     >
       <Animated.View style={[styles.tabItemInner, { transform: [{ scale: scaleValue }], opacity: opacityValue }]}>
-        <FontAwesome
-          name={iconName}
-          size={18}
-          color={isFocused ? colors.primary : colors.textSecondary}
-        />
-        <Text style={[styles.tabLabel, { color: isFocused ? colors.primary : colors.textSecondary, fontWeight: isFocused ? '700' : '500' }]}>
+        {renderIcon(isFocused ? activeColor : inactiveColor)}
+        <Text style={[styles.tabLabel, { color: isFocused ? activeTextColor : inactiveColor, fontWeight: isFocused ? '700' : '500' }]}>
           {label}
         </Text>
       </Animated.View>
@@ -47,10 +87,11 @@ function TabItem({ label, isFocused, onPress, onLongPress, iconName }: any) {
   );
 }
 
-function FloatingTabBar({ state, descriptors, navigation }: any) {
-  const { colors } = useThemeColors();
+function FloatingTabBar({ state, descriptors, navigation, isDark }: any) {
+  const router = useRouter();
+  
   return (
-    <View style={[styles.tabContainer, { backgroundColor: colors.tabBar, borderColor: colors.tabBarBorder }]}>
+    <View style={[styles.tabContainer, { backgroundColor: isDark ? '#0F172A' : '#1E293B' }]}>
       {state.routes.map((route: any, index: number) => {
         const { options } = descriptors[route.key];
         const label =
@@ -60,12 +101,20 @@ function FloatingTabBar({ state, descriptors, navigation }: any) {
             ? options.title
             : route.name;
 
-        // Skip rendering routes that don't belong in the tab bar if any
-        if (['_sitemap', '+not-found'].includes(route.name)) return null;
+        if (['_sitemap', '+not-found', 'goals', 'friends'].includes(route.name)) return null;
 
         const isFocused = state.index === index;
 
         const onPress = () => {
+          if (route.name === 'add-placeholder') {
+            router.push('/modal');
+            return;
+          }
+          if (route.name === 'notifications-placeholder') {
+            router.push('/notifications');
+            return;
+          }
+
           const event = navigation.emit({
             type: 'tabPress',
             target: route.key,
@@ -84,17 +133,6 @@ function FloatingTabBar({ state, descriptors, navigation }: any) {
           });
         };
 
-        const iconName =
-          route.name === 'index'
-            ? 'dashboard'
-            : route.name === 'two'
-            ? 'credit-card'
-            : route.name === 'goals'
-            ? 'bullseye'
-            : route.name === 'friends'
-            ? 'users'
-            : 'user';
-
         return (
           <TabItem
             key={route.name}
@@ -102,7 +140,8 @@ function FloatingTabBar({ state, descriptors, navigation }: any) {
             isFocused={isFocused}
             onPress={onPress}
             onLongPress={onLongPress}
-            iconName={iconName}
+            routeName={route.name}
+            isDark={isDark}
           />
         );
       })}
@@ -111,9 +150,10 @@ function FloatingTabBar({ state, descriptors, navigation }: any) {
 }
 
 export default function TabLayout() {
+  const { isDark } = useThemeColors();
   return (
     <Tabs
-      tabBar={(props) => <FloatingTabBar {...props} />}
+      tabBar={(props) => <FloatingTabBar {...props} isDark={isDark} />}
       screenOptions={{
         headerShown: false,
       }}
@@ -121,31 +161,43 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Dashboard',
+          title: 'Home',
         }}
       />
       <Tabs.Screen
         name="two"
         options={{
-          title: 'Wallets',
+          title: 'Wallet',
         }}
       />
       <Tabs.Screen
-        name="goals"
+        name="add-placeholder"
         options={{
-          title: 'Goals',
+          title: 'Add',
         }}
       />
       <Tabs.Screen
-        name="friends"
+        name="notifications-placeholder"
         options={{
-          title: 'Friends',
+          title: 'Notification',
         }}
       />
       <Tabs.Screen
         name="profile"
         options={{
           title: 'Profile',
+        }}
+      />
+      <Tabs.Screen
+        name="goals"
+        options={{
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="friends"
+        options={{
+          href: null,
         }}
       />
     </Tabs>
@@ -157,20 +209,18 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     position: 'absolute',
     bottom: 24,
-    left: 20,
-    right: 20,
-    backgroundColor: '#FFFFFF',
+    left: 16,
+    right: 16,
     borderRadius: 24,
-    height: 64,
+    height: 72,
     alignItems: 'center',
     justifyContent: 'space-around',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
     shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.05,
-    shadowRadius: 16,
-    elevation: 8,
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.15,
+    shadowRadius: 20,
+    elevation: 10,
+    paddingHorizontal: 8,
   },
   tabItem: {
     flex: 1,
@@ -183,13 +233,34 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   tabLabel: {
-    fontSize: 10,
+    fontSize: 9,
     marginTop: 4,
+    letterSpacing: 0.2,
   },
-  headerButton: {
-    marginRight: 16,
-    padding: 8,
-    borderRadius: 8,
-    backgroundColor: '#F1F5F9',
+  centerTabContainer: {
+    width: 68,
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: '100%',
+  },
+  floatingCenterButton: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#C5D2FF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    transform: [{ translateY: -10 }],
+    shadowColor: '#C5D2FF',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.35,
+    shadowRadius: 10,
+    elevation: 6,
+  },
+  centerTabLabel: {
+    fontSize: 9,
+    fontWeight: '700',
+    marginTop: -4,
+    letterSpacing: 0.2,
   },
 });

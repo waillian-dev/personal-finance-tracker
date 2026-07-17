@@ -17,6 +17,7 @@ import { useAuthStore } from '../store/authStore';
 import { useThemeColors } from '../hooks/useThemeColors';
 import api from '../services/api';
 import { formatCurrency } from '../utils/currency';
+import { AltArrowLeft } from '@solar-icons/react-native/Bold';
 
 const CURRENCIES = ['USD', 'MMK', 'EUR', 'SGD', 'THB', 'JPY'];
 
@@ -74,7 +75,7 @@ export default function SettingsScreen() {
       {/* Header */}
       <View style={[styles.header, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
         <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-          <FontAwesome name="arrow-left" size={18} color={colors.text} />
+          <AltArrowLeft size={22} color={colors.text} />
         </TouchableOpacity>
         <Text style={[styles.headerTitle, { color: colors.text }]}>System Settings</Text>
         <View style={{ width: 40 }} />

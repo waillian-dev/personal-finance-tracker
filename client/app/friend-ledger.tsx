@@ -16,6 +16,7 @@ import { useAuthStore } from '../store/authStore';
 import { formatCurrency } from '../utils/currency';
 import CustomAlert from '../components/CustomAlert';
 import { useThemeColors } from '../hooks/useThemeColors';
+import { AltArrowLeft } from '@solar-icons/react-native/Bold';
 
 interface LedgerItem {
   _id: string;
@@ -213,7 +214,7 @@ export default function FriendLedgerScreen() {
       {/* Header */}
       <View style={[styles.header, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
         <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-          <FontAwesome name="arrow-left" size={18} color={colors.text} />
+          <AltArrowLeft size={22} color={colors.text} />
         </TouchableOpacity>
         <Text style={[styles.headerTitle, { color: colors.text }]}>{friendName || 'Ledger'}</Text>
         <TouchableOpacity style={styles.settleHeaderBtn} onPress={handleSettleUp}>
