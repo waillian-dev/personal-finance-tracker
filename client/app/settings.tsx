@@ -17,22 +17,8 @@ import { useAuthStore } from '../store/authStore';
 import { useThemeColors } from '../hooks/useThemeColors';
 import api from '../services/api';
 import { formatCurrency } from '../utils/currency';
-import { Wallet, Category } from '../types';
 
 const CURRENCIES = ['USD', 'MMK', 'EUR', 'SGD', 'THB', 'JPY'];
-const FREQUENCIES = ['daily', 'weekly', 'monthly', 'yearly'];
-
-interface RecurringSetup {
-  _id: string;
-  name: string;
-  type: 'income' | 'expense';
-  amount: number;
-  walletId: Wallet;
-  categoryId: Category;
-  frequency: 'daily' | 'weekly' | 'monthly' | 'yearly';
-  nextDueDate: string;
-  isActive: boolean;
-}
 
 export default function SettingsScreen() {
   const router = useRouter();
@@ -49,64 +35,6 @@ export default function SettingsScreen() {
   const [notificationMonthlyFee, setNotificationMonthlyFee] = useState(user?.notificationMonthlyFee ?? true);
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [profileMsg, setProfileMsg] = useState('');
-
-  // Recurring Setup list/form states
-  const [recurringList, setRecurringList] = useState<RecurringSetup[]>([]);
-  const [wallets, setWallets] = useState<Wallet[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [isLoadingData, setIsLoadingData] = useState(true);
-
-  // New recurring transaction state
-  const [recName, setRecName] = useState('');
-  const [recType, setRecType] = useState<'income' | 'expense'>('expense');
-  const [recAmount, setRecAmount] = useState('');
-  const [recWalletId, setRecWalletId] = useState('');
-  const [recCategoryId, setRecCategoryId] = useState('');
-  const [recFrequency, setRecFrequency] = useState<'daily' | 'weekly' | 'monthly' | 'yearly'>('monthly');
-  const [recNextDueDate, setRecNextDueDate] = useState(new Date().toISOString().split('T')[0]);
-  const [isCreatingRec, setIsCreatingRec] = useState(false);
-
-  useEffect(() => {
-    const loadData = async () => {
-      try {
-        const [walletsRes, catsRes, recRes] = await Promise.all([
-          api.get('/wallets'),
-          api.get('/categories'),
-          api.get('/recurring'),
-        ]);
-
-        const walletsData = walletsRes.data.success ? walletsRes.data.data : [];
-        const catsData = catsRes.data.success ? catsRes.data.data : [];
-        
-        setWallets(walletsData);
-        setCategories(catsData);
-        setRecurringList(recRes.data.success ? recRes.data.data : []);
-
-        if (walletsData.length > 0) setRecWalletId(walletsData[0]._id);
-        
-        // Pre-select first category that matches type
-        const matchCat = catsData.find((c: any) => c.type === 'expense');
-        if (matchCat) setRecCategoryId(matchCat._id);
-
-      } catch (err) {
-        console.error('Error loading settings data:', err);
-      } finally {
-        setIsLoadingData(false);
-      }
-    };
-
-    loadData();
-  }, []);
-
-  // Update categories select list when type toggles
-  useEffect(() => {
-    const matchCat = categories.find((c) => c.type === recType);
-    if (matchCat) {
-      setRecCategoryId(matchCat._id);
-    } else {
-      setRecCategoryId('');
-    }
-  }, [recType, categories]);
 
   const handleSaveProfile = async () => {
     if (!name) {
@@ -141,93 +69,6 @@ export default function SettingsScreen() {
     }
   };
 
-  const handleCreateRecurring = async () => {
-    if (!recName.trim()) {
-      Alert.alert('Error', 'Please enter a title');
-      return;
-    }
-    if (!recAmount || isNaN(Number(recAmount)) || Number(recAmount) <= 0) {
-      Alert.alert('Error', 'Please enter a valid amount');
-      return;
-    }
-    if (!recWalletId || !recCategoryId) {
-      Alert.alert('Error', 'Please select both wallet and category');
-      return;
-    }
-
-    const parsedDate = new Date(recNextDueDate);
-    if (isNaN(parsedDate.getTime())) {
-      Alert.alert('Error', 'Please enter a valid start date in YYYY-MM-DD format');
-      return;
-    }
-
-    setIsCreatingRec(true);
-    try {
-      const response = await api.post('/recurring', {
-        name: recName.trim(),
-        type: recType,
-        amount: parseFloat(recAmount),
-        walletId: recWalletId,
-        categoryId: recCategoryId,
-        frequency: recFrequency,
-        nextDueDate: parsedDate.toISOString(),
-      });
-
-      if (response.data.success) {
-        // Reload list
-        const recRes = await api.get('/recurring');
-        setRecurringList(recRes.data.success ? recRes.data.data : []);
-        
-        // Reset form
-        setRecName('');
-        setRecAmount('');
-        setRecNextDueDate(new Date().toISOString().split('T')[0]);
-        Alert.alert('Success', `Recurring ${recType} created successfully! Next run scheduled for ${parsedDate.toLocaleDateString()}`);
-      }
-    } catch (err: any) {
-      Alert.alert('Error', err.response?.data?.error || 'Failed to create recurring transaction');
-    } finally {
-      setIsCreatingRec(false);
-    }
-  };
-
-  const handleToggleRecurringActive = async (id: string, currentStatus: boolean) => {
-    try {
-      const res = await api.put(`/recurring/${id}`, { isActive: !currentStatus });
-      if (res.data.success) {
-        setRecurringList(prev =>
-          prev.map(item => item._id === id ? { ...item, isActive: !currentStatus } : item)
-        );
-      }
-    } catch (err) {
-      Alert.alert('Error', 'Failed to toggle active state');
-    }
-  };
-
-  const handleDeleteRecurring = async (id: string) => {
-    Alert.alert(
-      'Delete Setup',
-      'Are you sure you want to delete this recurring setup? No future automatic transactions will be created.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              const res = await api.delete(`/recurring/${id}`);
-              if (res.data.success) {
-                setRecurringList(prev => prev.filter(item => item._id !== id));
-              }
-            } catch (err) {
-              Alert.alert('Error', 'Failed to delete recurring setup');
-            }
-          }
-        }
-      ]
-    );
-  };
-
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Header */}
@@ -239,12 +80,7 @@ export default function SettingsScreen() {
         <View style={{ width: 40 }} />
       </View>
 
-      {isLoadingData ? (
-        <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
-          <ActivityIndicator size="large" color="#059669" />
-        </View>
-      ) : (
-        <ScrollView contentContainerStyle={styles.scrollContainer} keyboardShouldPersistTaps="handled">
+      <ScrollView contentContainerStyle={styles.scrollContainer} keyboardShouldPersistTaps="handled">
           
           {/* SECTION 1: PROFILE & CURRENCY */}
           <View style={[styles.sectionCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
@@ -378,184 +214,7 @@ export default function SettingsScreen() {
             </TouchableOpacity>
           </View>
 
-          {/* SECTION 3: RECURRING AUTO-CREATE SETUP */}
-          <View style={styles.sectionCard}>
-            <Text style={styles.sectionTitle}>Auto-Create Transactions Setup</Text>
-            <Text style={styles.subtext}>Pre-setup automatically created salaries, recurring incomes, or monthly fee expenses.</Text>
-
-            {/* CREATE RECURRING FORM */}
-            <View style={styles.recForm}>
-              <Text style={styles.formSubtitle}>Create Auto-Trigger Setup</Text>
-
-              <View style={styles.inputGroup}>
-                <Text style={styles.label}>Title / Merchant (e.g. Salary, Dept Fee)</Text>
-                <TextInput
-                  style={styles.input}
-                  value={recName}
-                  onChangeText={setRecName}
-                  placeholder="Enter title"
-                  placeholderTextColor="#94A3B8"
-                />
-              </View>
-
-              <View style={styles.inputGroup}>
-                <Text style={styles.label}>Transaction Type</Text>
-                <View style={styles.typeGrid}>
-                  <TouchableOpacity
-                    style={[styles.typeBtn, recType === 'expense' && styles.typeBtnActiveExpense]}
-                    onPress={() => setRecType('expense')}
-                  >
-                    <Text style={[styles.typeBtnText, recType === 'expense' && styles.typeBtnTextActive]}>Expense</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[styles.typeBtn, recType === 'income' && styles.typeBtnActiveIncome]}
-                    onPress={() => setRecType('income')}
-                  >
-                    <Text style={[styles.typeBtnText, recType === 'income' && styles.typeBtnTextActive]}>Income</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-
-              <View style={styles.inputGroup}>
-                <Text style={styles.label}>Amount</Text>
-                <TextInput
-                  style={styles.input}
-                  value={recAmount}
-                  onChangeText={setRecAmount}
-                  keyboardType="numeric"
-                  placeholder="e.g. 5000"
-                  placeholderTextColor="#94A3B8"
-                />
-              </View>
-
-              <View style={styles.inputGroup}>
-                <Text style={styles.label}>Wallet</Text>
-                <View style={styles.selectorGrid}>
-                  {wallets.map((w) => (
-                    <TouchableOpacity
-                      key={w._id}
-                      style={[
-                        styles.selectorCard,
-                        recWalletId === w._id && { borderColor: w.color, borderWidth: 2 },
-                      ]}
-                      onPress={() => setRecWalletId(w._id)}
-                    >
-                      <View style={[styles.colorDot, { backgroundColor: w.color }]} />
-                      <Text style={styles.selectorCardText}>{w.name}</Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              </View>
-
-              <View style={styles.inputGroup}>
-                <Text style={styles.label}>Category</Text>
-                <View style={styles.selectorGrid}>
-                  {categories.filter(c => c.type === recType).map((c) => (
-                    <TouchableOpacity
-                      key={c._id}
-                      style={[
-                        styles.selectorCard,
-                        recCategoryId === c._id && { borderColor: c.color, borderWidth: 2 },
-                      ]}
-                      onPress={() => setRecCategoryId(c._id)}
-                    >
-                      <Text style={styles.emojiDot}>{c.emoji}</Text>
-                      <Text style={styles.selectorCardText}>{c.name}</Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              </View>
-
-              <View style={styles.inputGroup}>
-                <Text style={styles.label}>Frequency</Text>
-                <View style={styles.frequencyGrid}>
-                  {FREQUENCIES.map((f) => (
-                    <TouchableOpacity
-                      key={f}
-                      style={[
-                        styles.frequencyBtn,
-                        recFrequency === f && styles.frequencyBtnActive,
-                      ]}
-                      onPress={() => setRecFrequency(f as any)}
-                    >
-                      <Text style={[styles.frequencyBtnText, recFrequency === f && styles.frequencyBtnTextActive]}>
-                        {f.charAt(0).toUpperCase() + f.slice(1)}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              </View>
-
-              <View style={styles.inputGroup}>
-                <Text style={styles.label}>Next Run Date (Start Date)</Text>
-                <TextInput
-                  style={styles.input}
-                  value={recNextDueDate}
-                  onChangeText={setRecNextDueDate}
-                  placeholder="YYYY-MM-DD"
-                  placeholderTextColor="#94A3B8"
-                />
-                <Text style={{ fontSize: 11, color: '#64748B', marginTop: 4 }}>
-                  Enter start date in YYYY-MM-DD format (defaults to today).
-                </Text>
-              </View>
-
-              <TouchableOpacity
-                style={styles.addRecButton}
-                onPress={handleCreateRecurring}
-                disabled={isCreatingRec}
-              >
-                {isCreatingRec ? (
-                  <ActivityIndicator color="#FFFFFF" size="small" />
-                ) : (
-                  <Text style={styles.addRecButtonText}>Add Auto-Create Setup</Text>
-                )}
-              </TouchableOpacity>
-            </View>
-
-            {/* LIST OF RECURRING */}
-            <Text style={styles.listSubtitle}>Active Auto-Create Setups</Text>
-            {recurringList.length === 0 ? (
-              <Text style={styles.emptyListText}>No pre-setup auto transactions found.</Text>
-            ) : (
-              recurringList.map((item) => (
-                <View key={item._id} style={styles.recItemCard}>
-                  <View style={styles.recItemHeader}>
-                    <View>
-                      <Text style={styles.recItemTitle}>{item.name}</Text>
-                      <Text style={styles.recItemSub}>
-                        {item.frequency.toUpperCase()} • {formatCurrency(item.amount, user?.currency)}
-                      </Text>
-                    </View>
-                    <View style={styles.recActionsRow}>
-                      <Switch
-                        value={item.isActive}
-                        onValueChange={() => handleToggleRecurringActive(item._id, item.isActive)}
-                        trackColor={{ false: '#E2E8F0', true: '#A7F3D0' }}
-                        thumbColor={item.isActive ? '#059669' : '#CBD5E1'}
-                      />
-                      <TouchableOpacity onPress={() => handleDeleteRecurring(item._id)} style={styles.deleteBtn}>
-                        <FontAwesome name="trash" size={16} color="#EF4444" />
-                      </TouchableOpacity>
-                    </View>
-                  </View>
-                  <View style={styles.recDetailsRow}>
-                    <Text style={styles.recMetaText}>Wallet: {item.walletId?.name || 'Deleted'}</Text>
-                    <Text style={styles.recMetaText}>
-                      Next Run:{' '}
-                      {new Date(item.nextDueDate).toLocaleDateString(undefined, {
-                        month: 'short',
-                        day: 'numeric',
-                      })}
-                    </Text>
-                  </View>
-                </View>
-              ))
-            )}
-          </View>
-
         </ScrollView>
-      )}
     </SafeAreaView>
   );
 }

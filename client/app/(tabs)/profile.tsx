@@ -9,6 +9,8 @@ import {
   Image,
   Switch,
   Dimensions,
+  Modal,
+  FlatList,
 } from 'react-native';
 import { FontAwesome } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -22,7 +24,6 @@ import {
   AltArrowRight,
   Card,
   DocumentText,
-  Devices,
   Key,
   Eye,
   Global,
@@ -36,16 +37,21 @@ import {
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
+const CURRENCIES = [
+  { code: 'USD', flag: '🇺🇸', label: 'USD (US Dollar)' },
+  { code: 'MMK', flag: '🇲🇲', label: 'MMK (Myanmar Kyat)' },
+  { code: 'EUR', flag: '🇪🇺', label: 'EUR (Euro)' },
+  { code: 'SGD', flag: '🇸🇬', label: 'SGD (Singapore Dollar)' },
+  { code: 'GBP', flag: '🇬🇧', label: 'GBP (British Pound)' },
+];
+
 export default function ProfileScreen() {
   const { colors, isDark } = useThemeColors();
-  const { user, logout } = useAuthStore();
+  const { user, logout, updateProfile } = useAuthStore();
   const router = useRouter();
   
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
-
-  // Switch Toggle States
-  const [faceIdEnabled, setFaceIdEnabled] = useState(true);
-  const [hideBalancesEnabled, setHideBalancesEnabled] = useState(false);
+  const [showCurrencyModal, setShowCurrencyModal] = useState(false);
 
   const handleLogout = () => {
     setShowLogoutConfirm(true);
@@ -57,6 +63,37 @@ export default function ProfileScreen() {
     } catch (e) {
       console.error('Logout error:', e);
     }
+  };
+
+  const handleUpdateCurrency = async (code: string) => {
+    try {
+      await updateProfile({ currency: code });
+      setShowCurrencyModal(false);
+    } catch (err) {
+      console.error('Failed to update currency:', err);
+    }
+  };
+
+  const handleToggleTheme = async (val: boolean) => {
+    try {
+      await updateProfile({ theme: val ? 'dark' : 'light' });
+    } catch (err) {
+      console.error('Failed to update theme:', err);
+    }
+  };
+
+  const handleToggleNotification = async (val: boolean) => {
+    try {
+      await updateProfile({ notificationExpenseLimit: val });
+    } catch (err) {
+      console.error('Failed to update notification config:', err);
+    }
+  };
+
+  const getCurrencyDisplay = () => {
+    const currentCode = user?.currency || 'USD';
+    const match = CURRENCIES.find(c => c.code === currentCode);
+    return match ? `${match.flag} ${match.code}` : `🇺🇸 ${currentCode}`;
   };
 
   const renderIcon = (IconComponent: any, bgColor: string, iconColor: string) => {
@@ -88,7 +125,10 @@ export default function ProfileScreen() {
               source={{ uri: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80' }}
               style={styles.avatarImage}
             />
-            <TouchableOpacity style={[styles.cameraButton, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <TouchableOpacity 
+              style={[styles.cameraButton, { backgroundColor: colors.card, borderColor: colors.border }]}
+              onPress={() => router.push('/account-settings')}
+            >
               <FontAwesome name="camera" size={12} color={colors.textSecondary} />
             </TouchableOpacity>
           </View>
@@ -103,63 +143,77 @@ export default function ProfileScreen() {
 
         {/* Group 1: General Account Features */}
         <View style={[styles.menuGroup, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          <TouchableOpacity style={[styles.menuItem, { borderBottomColor: colors.border }]} onPress={() => router.push('/settings')}>
+          <TouchableOpacity 
+            style={[styles.menuItem, { borderBottomColor: colors.border }]} 
+            onPress={() => router.push('/(tabs)/two')}
+          >
             {renderIcon(Card, 'rgba(59, 130, 246, 0.1)', '#3B82F6')}
             <Text style={[styles.menuText, { color: colors.text }]}>Card confirmation</Text>
             <AltArrowRight size={18} color={colors.textSecondary} />
           </TouchableOpacity>
 
-          <TouchableOpacity style={[styles.menuItem, { borderBottomColor: colors.border }]} onPress={() => router.push('/settings')}>
+          <TouchableOpacity 
+            style={[styles.menuItem, { borderBottomColor: colors.border }]} 
+            onPress={() => router.push('/account-settings')}
+          >
             {renderIcon(Widget, 'rgba(16, 185, 129, 0.1)', '#10B981')}
             <Text style={[styles.menuText, { color: colors.text }]}>Account details</Text>
             <AltArrowRight size={18} color={colors.textSecondary} />
           </TouchableOpacity>
 
-          <TouchableOpacity style={[styles.menuItem, { borderBottomColor: colors.border }]} onPress={() => router.push('/transactions')}>
+          <TouchableOpacity 
+            style={[styles.menuItem, { borderBottomColor: colors.border }]} 
+            onPress={() => router.push('/transactions')}
+          >
             {renderIcon(DocumentText, 'rgba(139, 92, 246, 0.1)', '#8B5CF6')}
             <Text style={[styles.menuText, { color: colors.text }]}>Transaction history</Text>
             <AltArrowRight size={18} color={colors.textSecondary} />
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.menuItem} onPress={() => router.push('/settings')}>
+          <TouchableOpacity 
+            style={styles.menuItem} 
+            onPress={() => router.push('/settings')}
+          >
             {renderIcon(DocumentText, 'rgba(245, 158, 11, 0.1)', '#F59E0B')}
             <Text style={[styles.menuText, { color: colors.text }]}>Documents and statements</Text>
             <AltArrowRight size={18} color={colors.textSecondary} />
           </TouchableOpacity>
         </View>
 
-        {/* Group 2: SECURITY */}
-        <Text style={[styles.sectionHeader, { color: colors.textSecondary }]}>SECURITY</Text>
+        {/* Group 2: SYSTEM SETTINGS */}
+        <Text style={[styles.sectionHeader, { color: colors.textSecondary }]}>SYSTEM SETTINGS</Text>
         <View style={[styles.menuGroup, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          <TouchableOpacity style={[styles.menuItem, { borderBottomColor: colors.border }]}>
-            {renderIcon(Devices, 'rgba(59, 130, 246, 0.1)', '#3B82F6')}
-            <Text style={[styles.menuText, { color: colors.text }]}>Devices</Text>
-            <AltArrowRight size={18} color={colors.textSecondary} />
-          </TouchableOpacity>
-
-          <TouchableOpacity style={[styles.menuItem, { borderBottomColor: colors.border }]}>
-            {renderIcon(Key, 'rgba(139, 92, 246, 0.1)', '#8B5CF6')}
-            <Text style={[styles.menuText, { color: colors.text }]}>Change passcode</Text>
-            <AltArrowRight size={18} color={colors.textSecondary} />
+          <TouchableOpacity 
+            style={[styles.menuItem, { borderBottomColor: colors.border }]}
+            onPress={() => setShowCurrencyModal(true)}
+          >
+            {renderIcon(Global, 'rgba(59, 130, 246, 0.1)', '#3B82F6')}
+            <Text style={[styles.menuText, { color: colors.text }]}>Currency</Text>
+            <View style={styles.currencyDisplayWrapper}>
+              <Text style={[styles.currencyDisplayText, { color: colors.textSecondary }]}>
+                {getCurrencyDisplay()}
+              </Text>
+              <AltArrowRight size={16} color={colors.textSecondary} />
+            </View>
           </TouchableOpacity>
 
           <View style={[styles.menuItem, { borderBottomColor: colors.border }]}>
-            {renderIcon(ShieldKeyhole, 'rgba(16, 185, 129, 0.1)', '#10B981')}
-            <Text style={[styles.menuText, { color: colors.text }]}>Face ID</Text>
+            {renderIcon(Eye, 'rgba(139, 92, 246, 0.1)', '#8B5CF6')}
+            <Text style={[styles.menuText, { color: colors.text }]}>Dark Mode</Text>
             <Switch
-              value={faceIdEnabled}
-              onValueChange={setFaceIdEnabled}
+              value={isDark}
+              onValueChange={handleToggleTheme}
               trackColor={{ false: '#CBD5E1', true: '#3B82F6' }}
               thumbColor="#FFFFFF"
             />
           </View>
 
           <View style={styles.menuItem}>
-            {renderIcon(Eye, 'rgba(239, 68, 68, 0.1)', '#EF4444')}
-            <Text style={[styles.menuText, { color: colors.text }]}>Hide balances</Text>
+            {renderIcon(ShieldKeyhole, 'rgba(16, 185, 129, 0.1)', '#10B981')}
+            <Text style={[styles.menuText, { color: colors.text }]}>Alert warnings</Text>
             <Switch
-              value={hideBalancesEnabled}
-              onValueChange={setHideBalancesEnabled}
+              value={user?.notificationExpenseLimit !== false}
+              onValueChange={handleToggleNotification}
               trackColor={{ false: '#CBD5E1', true: '#3B82F6' }}
               thumbColor="#FFFFFF"
             />
@@ -214,6 +268,38 @@ export default function ProfileScreen() {
         </View>
 
       </ScrollView>
+
+      {/* Currency Selector Modal */}
+      <Modal
+        visible={showCurrencyModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowCurrencyModal(false)}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setShowCurrencyModal(false)}
+        >
+          <View style={[styles.dropdownOptionsCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <Text style={[styles.dropdownHeading, { color: colors.textSecondary }]}>SELECT BASE CURRENCY</Text>
+            <FlatList
+              data={CURRENCIES}
+              keyExtractor={(item) => item.code}
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  style={[styles.dropdownItem, { borderBottomColor: colors.border }]}
+                  onPress={() => handleUpdateCurrency(item.code)}
+                >
+                  <Text style={[styles.dropdownItemText, { color: colors.text }, user?.currency === item.code && { fontWeight: '700' }]}>
+                    {item.flag} {item.label}
+                  </Text>
+                </TouchableOpacity>
+              )}
+            />
+          </View>
+        </TouchableOpacity>
+      </Modal>
 
       <CustomAlert
         visible={showLogoutConfirm}
@@ -354,5 +440,50 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 14,
     fontWeight: '600',
+  },
+  currencyDisplayWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  currencyDisplayText: {
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  modalOverlay: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    padding: 24,
+  },
+  dropdownOptionsCard: {
+    width: '100%',
+    maxHeight: 320,
+    borderRadius: 20,
+    borderWidth: 1,
+    padding: 20,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.1,
+    shadowRadius: 20,
+    elevation: 5,
+  },
+  dropdownHeading: {
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+    marginBottom: 12,
+  },
+  dropdownItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+  },
+  dropdownItemText: {
+    fontSize: 14,
+    fontWeight: '500',
   },
 });

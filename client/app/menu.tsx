@@ -89,6 +89,12 @@ export default function MenuScreen() {
       onPress: () => router.push('/transactions'),
     },
     {
+      label: 'Auto-Transactions',
+      icon: <FontAwesome name="refresh" size={16} color="#FFFFFF" />,
+      iconBg: '#10B981',
+      onPress: () => router.push('/auto-transactions'),
+    },
+    {
       label: 'Friends',
       icon: <FontAwesome name="users" size={16} color="#FFFFFF" />,
       iconBg: '#EF4444',
