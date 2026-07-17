@@ -304,6 +304,25 @@ export default function DashboardScreen() {
           <View style={styles.balanceSection}>
             <Text style={[styles.activeBalanceLabel, { color: headerTextSecondary }]}>Active Total Balance</Text>
             <Text style={[styles.activeBalanceValue, { color: headerText }]}>{formatCurrency(netWorth, user?.currency)}</Text>
+            
+            {/* Assets & Debts Stats sub-row */}
+            <View style={[styles.headerSubStatsRow, { borderTopColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(30, 27, 75, 0.12)' }]}>
+              <View style={styles.headerSubStatBlock}>
+                <Text style={[styles.headerSubStatLabel, { color: headerTextSecondary }]}>Assets</Text>
+                <Text style={[styles.headerSubStatValue, { color: isDark ? '#34D399' : '#059669' }]}>
+                  {formatCurrency(totalAssets, user?.currency)}
+                </Text>
+              </View>
+              
+              <View style={[styles.headerSubStatDivider, { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(30, 27, 75, 0.15)' }]} />
+              
+              <View style={styles.headerSubStatBlock}>
+                <Text style={[styles.headerSubStatLabel, { color: headerTextSecondary }]}>Debts</Text>
+                <Text style={[styles.headerSubStatValue, { color: '#EF4444' }]}>
+                  {formatCurrency(totalDebts, user?.currency)}
+                </Text>
+              </View>
+            </View>
           </View>
         </View>
 
@@ -621,6 +640,30 @@ const styles = StyleSheet.create({
     fontSize: 32,
     fontWeight: '700',
     marginTop: 6,
+  },
+  headerSubStatsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 14,
+    paddingTop: 12,
+    borderTopWidth: 1,
+  },
+  headerSubStatBlock: {
+    flex: 1,
+  },
+  headerSubStatLabel: {
+    fontSize: 11,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  headerSubStatValue: {
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  headerSubStatDivider: {
+    width: 1,
+    height: 20,
+    marginHorizontal: 16,
   },
   overlapCard: {
     flexDirection: 'row',
