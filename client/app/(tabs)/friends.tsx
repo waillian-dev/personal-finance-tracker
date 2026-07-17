@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   StyleSheet,
   Text,
@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   SafeAreaView,
+  Animated,
 } from 'react-native';
 import { FontAwesome } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -16,6 +17,18 @@ import { useAuthStore } from '../../store/authStore';
 import { formatCurrency } from '../../utils/currency';
 import CustomAlert from '../../components/CustomAlert';
 import { useThemeColors } from '../../hooks/useThemeColors';
+
+// Solar Icons
+import * as SolarBold from '@solar-icons/react-native/Bold';
+import {
+  AddCircle,
+  AltArrowRight,
+  User,
+  Card,
+  Letter,
+  CheckCircle,
+  CloseCircle,
+} from '@solar-icons/react-native/Bold';
 
 interface FriendItem {
   friendshipId: string;
@@ -122,12 +135,165 @@ export default function FriendsScreen() {
     }
   };
 
+  // Mini credit card renderer for friends
+  const renderFriendCard = (item: FriendItem) => {
+    const owesMe = item.netBalance > 0;
+    const iOwe = item.netBalance < 0;
+    const absBalance = Math.abs(item.netBalance);
+    
+    // Choose theme colors matching wallet credit cards
+    const cardBg = owesMe ? '#10B981' : iOwe ? '#EF4444' : '#64748B';
+    const footerBg = 'rgba(0, 0, 0, 0.2)';
+
+    return (
+      <TouchableOpacity
+        key={item.friendshipId}
+        activeOpacity={0.9}
+        onPress={() =>
+          router.push({
+            pathname: '/friend-ledger',
+            params: { friendId: item.friend._id, friendName: item.friend.name },
+          })
+        }
+        style={[styles.friendCard, { backgroundColor: cardBg }]}
+      >
+        <View style={styles.cardTop}>
+          <View>
+            <Text style={styles.cardTotalLabel}>Net Standing Balance</Text>
+            <Text style={styles.cardBalanceText}>
+              {owesMe ? '+' : iOwe ? '-' : ''}{formatCurrency(absBalance, user?.currency || 'USD')}
+            </Text>
+          </View>
+          <View style={styles.badgeWrapper}>
+            <Text style={styles.badgeText}>
+              {owesMe ? 'OWES YOU' : iOwe ? 'YOU OWE' : 'SETTLED'}
+            </Text>
+          </View>
+        </View>
+
+        <View style={styles.cardMiddle}>
+          <Text style={styles.cardNumberText}>
+            ••••  ••••  ••••  {item.friend.name.substring(0, 4).toUpperCase()}
+          </Text>
+        </View>
+
+        <View style={[styles.cardFooterStrip, { backgroundColor: footerBg }]}>
+          <View>
+            <Text style={styles.footerLabel}>Friend Name</Text>
+            <Text style={styles.footerName}>{item.friend.name}</Text>
+          </View>
+          <View style={styles.footerRight}>
+            <Text style={styles.footerEmail} numberOfLines={1}>{item.friend.email}</Text>
+            <FontAwesome name="chevron-right" size={12} color="#FFFFFF" style={{ marginLeft: 8 }} />
+          </View>
+        </View>
+      </TouchableOpacity>
+    );
+  };
+
+  if (isLoading) {
+    return (
+      <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
+        <ActivityIndicator size="large" color="#3B82F6" />
+      </View>
+    );
+  }
+
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* Header */}
-      <View style={[styles.header, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>Friends & Ledgers</Text>
-      </View>
+      {/* Centered screen title */}
+      <Text style={[styles.screenTitle, { color: colors.text }]}>Friends & Ledgers</Text>
+
+      <ScrollView contentContainerStyle={styles.scrollContainer} keyboardShouldPersistTaps="handled">
+        
+        {/* ADD FRIEND CARD */}
+        <View style={[styles.formCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <Text style={[styles.formHeading, { color: colors.text }]}>Add Friend by Email</Text>
+          <View style={styles.addFriendRow}>
+            <TextInput
+              style={[styles.input, { backgroundColor: colors.inputBg, borderColor: colors.border, color: colors.text }]}
+              value={email}
+              onChangeText={setEmail}
+              placeholder="friend@example.com"
+              placeholderTextColor="#94A3B8"
+              keyboardType="email-address"
+              autoCapitalize="none"
+            />
+            <TouchableOpacity
+              style={[styles.sendButton, { backgroundColor: '#1E293B' }]}
+              onPress={handleSendRequest}
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? (
+                <ActivityIndicator color="#FFFFFF" size="small" />
+              ) : (
+                <Text style={styles.sendButtonText}>Invite</Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* PENDING INCOMING REQUESTS */}
+        {pendingIncoming.length > 0 && (
+          <View style={styles.section}>
+            <Text style={[styles.sectionHeader, { color: colors.textSecondary }]}>INCOMING REQUESTS ({pendingIncoming.length})</Text>
+            {pendingIncoming.map((item) => (
+              <View key={item.friendshipId} style={[styles.requestCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                <View style={styles.requestInfo}>
+                  <Text style={[styles.requestName, { color: colors.text }]}>{item.friend.name}</Text>
+                  <Text style={[styles.requestEmail, { color: colors.textSecondary }]}>{item.friend.email}</Text>
+                </View>
+                <View style={styles.requestActions}>
+                  <TouchableOpacity
+                    style={[styles.actionBtn, styles.acceptBtn]}
+                    onPress={() => handleRespondRequest(item.friendshipId, 'accepted')}
+                  >
+                    <FontAwesome name="check" size={14} color="#FFFFFF" />
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.actionBtn, styles.rejectBtn]}
+                    onPress={() => handleRespondRequest(item.friendshipId, 'rejected')}
+                  >
+                    <FontAwesome name="times" size={14} color="#FFFFFF" />
+                  </TouchableOpacity>
+                </View>
+              </View>
+            ))}
+          </View>
+        )}
+
+        {/* OUTGOING SENT REQUESTS */}
+        {pendingOutgoing.length > 0 && (
+          <View style={styles.section}>
+            <Text style={[styles.sectionHeader, { color: colors.textSecondary }]}>SENT REQUESTS</Text>
+            {pendingOutgoing.map((item) => (
+              <View key={item.friendshipId} style={[styles.requestCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                <View>
+                  <Text style={[styles.requestName, { color: colors.text }]}>{item.friend.name}</Text>
+                  <Text style={[styles.requestEmail, { color: colors.textSecondary }]}>{item.friend.email}</Text>
+                </View>
+                <View style={styles.pendingBadge}>
+                  <Text style={styles.pendingBadgeText}>Pending</Text>
+                </View>
+              </View>
+            ))}
+          </View>
+        )}
+
+        {/* ACTIVE FRIENDS (WALLET CARDS) LIST */}
+        <Text style={[styles.sectionHeader, { color: colors.textSecondary }]}>MY FRIENDS LEDGER CARDS</Text>
+        {friends.length === 0 ? (
+          <View style={[styles.emptyContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <FontAwesome name="users" size={44} color={colors.textSecondary} />
+            <Text style={[styles.emptyText, { color: colors.textSecondary }]}>You haven't added any friends yet.</Text>
+          </View>
+        ) : (
+          <View style={styles.friendsListGrid}>
+            {friends.map((item) => renderFriendCard(item))}
+          </View>
+        )}
+
+      </ScrollView>
 
       <CustomAlert
         visible={alertDialog.visible}
@@ -138,148 +304,6 @@ export default function FriendsScreen() {
         onClose={() => setAlertDialog(prev => ({ ...prev, visible: false }))}
         onConfirm={alertDialog.onConfirm}
       />
-
-      {isLoading ? (
-        <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
-          <ActivityIndicator size="large" color="#059669" />
-        </View>
-      ) : (
-        <ScrollView contentContainerStyle={styles.scrollContainer} keyboardShouldPersistTaps="handled">
-          
-          {/* ADD FRIEND CARD */}
-          <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
-            <Text style={[styles.cardTitle, { color: colors.text }]}>Add Friend by Email</Text>
-            <View style={styles.addFriendRow}>
-              <TextInput
-                style={[styles.input, { backgroundColor: colors.inputBg, borderColor: colors.border, color: colors.text }]}
-                value={email}
-                onChangeText={setEmail}
-                placeholder="friend@example.com"
-                placeholderTextColor="#94A3B8"
-                keyboardType="email-address"
-                autoCapitalize="none"
-              />
-              <TouchableOpacity
-                style={styles.sendButton}
-                onPress={handleSendRequest}
-                disabled={isSubmitting}
-              >
-                {isSubmitting ? (
-                  <ActivityIndicator color="#FFFFFF" size="small" />
-                ) : (
-                  <Text style={styles.sendButtonText}>Send</Text>
-                )}
-              </TouchableOpacity>
-            </View>
-          </View>
-
-          {/* PENDING INCOMING REQUESTS */}
-          {pendingIncoming.length > 0 && (
-            <View style={styles.section}>
-              <Text style={[styles.sectionHeader, { color: colors.textSecondary }]}>Incoming Requests ({pendingIncoming.length})</Text>
-              {pendingIncoming.map((item) => (
-                <View key={item.friendshipId} style={[styles.requestCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-                  <View style={styles.requestInfo}>
-                    <Text style={[styles.friendName, { color: colors.text }]}>{item.friend.name}</Text>
-                    <Text style={[styles.friendEmail, { color: colors.textSecondary }]}>{item.friend.email}</Text>
-                  </View>
-                  <View style={styles.requestActions}>
-                    <TouchableOpacity
-                      style={[styles.actionBtn, styles.acceptBtn]}
-                      onPress={() => handleRespondRequest(item.friendshipId, 'accepted')}
-                    >
-                      <FontAwesome name="check" size={14} color="#FFFFFF" />
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={[styles.actionBtn, styles.rejectBtn]}
-                      onPress={() => handleRespondRequest(item.friendshipId, 'rejected')}
-                    >
-                      <FontAwesome name="times" size={14} color="#FFFFFF" />
-                    </TouchableOpacity>
-                  </View>
-                </View>
-              ))}
-            </View>
-          )}
-
-          {/* OUTGOING SENT REQUESTS */}
-          {pendingOutgoing.length > 0 && (
-            <View style={styles.section}>
-              <Text style={[styles.sectionHeader, { color: colors.textSecondary }]}>Sent Requests</Text>
-              {pendingOutgoing.map((item) => (
-                <View key={item.friendshipId} style={[styles.friendRow, { backgroundColor: colors.card, borderColor: colors.border }]}>
-                  <View>
-                    <Text style={[styles.friendName, { color: colors.text }]}>{item.friend.name}</Text>
-                    <Text style={[styles.friendEmail, { color: colors.textSecondary }]}>{item.friend.email}</Text>
-                  </View>
-                  <View style={styles.pendingBadge}>
-                    <Text style={styles.pendingBadgeText}>Pending</Text>
-                  </View>
-                </View>
-              ))}
-            </View>
-          )}
-
-          {/* ACTIVE FRIENDS LIST */}
-          <View style={styles.section}>
-            <Text style={[styles.sectionHeader, { color: colors.textSecondary }]}>My Friends</Text>
-            {friends.length === 0 ? (
-              <View style={[styles.emptyContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
-                <FontAwesome name="users" size={40} color={colors.textSecondary} />
-                <Text style={[styles.emptyText, { color: colors.textSecondary }]}>You haven't added any friends yet.</Text>
-              </View>
-            ) : (
-              friends.map((item) => {
-                const owesMe = item.netBalance > 0;
-                const iOwe = item.netBalance < 0;
-                const absBalance = Math.abs(item.netBalance);
-
-                return (
-                  <TouchableOpacity
-                    key={item.friendshipId}
-                    style={[styles.friendCard, { backgroundColor: colors.card, borderColor: colors.border }]}
-                    onPress={() =>
-                      router.push({
-                        pathname: '/friend-ledger',
-                        params: { friendId: item.friend._id, friendName: item.friend.name },
-                      })
-                    }
-                  >
-                    <View style={styles.friendCardLeft}>
-                      <View style={[styles.avatarPlaceholder, { backgroundColor: isDark ? '#115E59' : '#D1FAE5' }]}>
-                        <Text style={[styles.avatarText, { color: isDark ? '#2DD4BF' : '#059669' }]}>
-                          {item.friend.name.charAt(0).toUpperCase()}
-                        </Text>
-                      </View>
-                      <View>
-                        <Text style={[styles.friendCardName, { color: colors.text }]}>{item.friend.name}</Text>
-                        <Text style={[styles.friendCardEmail, { color: colors.textSecondary }]}>{item.friend.email}</Text>
-                      </View>
-                    </View>
-                    <View style={styles.friendCardRight}>
-                      {owesMe ? (
-                        <Text style={[styles.balanceText, styles.owesMe]}>
-                          owes you {formatCurrency(absBalance, user?.currency || 'USD')}
-                        </Text>
-                      ) : iOwe ? (
-                        <Text style={[styles.balanceText, styles.iOwe]}>
-                          you owe {formatCurrency(absBalance, user?.currency || 'USD')}
-                        </Text>
-                      ) : (
-                        <Text style={[styles.balanceText, styles.settled]}>
-                          settled up
-                        </Text>
-                      )}
-                      <FontAwesome name="chevron-right" size={12} color="#94A3B8" style={{ marginLeft: 8 }} />
-                    </View>
-                  </TouchableOpacity>
-                );
-              })
-            )}
-          </View>
-
-        </ScrollView>
-      )}
     </SafeAreaView>
   );
 }
@@ -287,23 +311,12 @@ export default function FriendsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
   },
-  header: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 16,
-    paddingTop: 16,
-    paddingBottom: 16,
-    backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
-  },
-  headerTitle: {
-    fontFamily: 'System',
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#0F172A',
+  screenTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    textAlign: 'center',
+    paddingVertical: 14,
   },
   loadingContainer: {
     flex: 1,
@@ -311,22 +324,24 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   scrollContainer: {
-    padding: 20,
-    paddingBottom: 110, // Extra padding for the floating navigation bar
+    paddingHorizontal: 24,
+    paddingTop: 10,
+    paddingBottom: 110,
   },
-  card: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    padding: 20,
+  formCard: {
+    borderRadius: 24,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
-    marginBottom: 20,
+    padding: 20,
+    marginBottom: 24,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.01,
+    shadowRadius: 8,
+    elevation: 2,
   },
-  cardTitle: {
-    fontFamily: 'System',
+  formHeading: {
     fontSize: 14,
-    fontWeight: 'bold',
-    color: '#0F172A',
+    fontWeight: '700',
     marginBottom: 12,
   },
   addFriendRow: {
@@ -335,52 +350,57 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
-    height: 44,
-    backgroundColor: '#F8FAFC',
+    height: 48,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
-    borderRadius: 10,
-    paddingHorizontal: 14,
+    borderRadius: 12,
+    paddingHorizontal: 16,
     fontSize: 14,
-    color: '#0F172A',
   },
   sendButton: {
-    width: 70,
-    height: 44,
-    backgroundColor: '#059669',
-    borderRadius: 10,
+    width: 80,
+    height: 48,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 2,
   },
   sendButtonText: {
-    fontFamily: 'System',
     color: '#FFFFFF',
-    fontWeight: 'bold',
+    fontWeight: '700',
     fontSize: 14,
   },
   section: {
-    marginBottom: 20,
+    marginBottom: 24,
   },
   sectionHeader: {
-    fontFamily: 'System',
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: '#475569',
-    marginBottom: 10,
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+    marginBottom: 12,
   },
   requestCard: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#FFFFFF',
     borderRadius: 16,
-    padding: 14,
+    padding: 16,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
     marginBottom: 8,
   },
   requestInfo: {
     flex: 1,
+  },
+  requestName: {
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  requestEmail: {
+    fontSize: 12,
+    marginTop: 2,
   },
   requestActions: {
     flexDirection: 'row',
@@ -399,115 +419,110 @@ const styles = StyleSheet.create({
   rejectBtn: {
     backgroundColor: '#EF4444',
   },
-  friendRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    marginBottom: 8,
-  },
-  friendName: {
-    fontFamily: 'System',
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: '#0F172A',
-  },
-  friendEmail: {
-    fontFamily: 'System',
-    fontSize: 12,
-    color: '#64748B',
-    marginTop: 2,
-  },
   pendingBadge: {
     backgroundColor: '#FEF3C7',
-    paddingVertical: 4,
-    paddingHorizontal: 10,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
     borderRadius: 8,
   },
   pendingBadgeText: {
-    fontFamily: 'System',
     color: '#D97706',
     fontSize: 11,
     fontWeight: '600',
   },
   emptyContainer: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
+    borderRadius: 24,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
-    padding: 24,
+    padding: 32,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  emptyText: {
-    fontFamily: 'System',
-    fontSize: 13,
-    color: '#64748B',
     marginTop: 10,
   },
+  emptyText: {
+    fontSize: 13,
+    fontWeight: '500',
+    marginTop: 12,
+  },
+  friendsListGrid: {
+    gap: 16,
+  },
   friendCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 16,
+    height: 160,
+    borderRadius: 24,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
-    marginBottom: 8,
+    borderColor: 'rgba(255, 255, 255, 0.15)',
+    overflow: 'hidden',
+    justifyContent: 'space-between',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.04,
+    shadowRadius: 12,
+    elevation: 3,
   },
-  friendCardLeft: {
+  cardTop: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingTop: 18,
   },
-  avatarPlaceholder: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#D1FAE5',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  avatarText: {
-    fontFamily: 'System',
-    color: '#059669',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  friendCardName: {
-    fontFamily: 'System',
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: '#0F172A',
-  },
-  friendCardEmail: {
-    fontFamily: 'System',
+  cardTotalLabel: {
     fontSize: 11,
-    color: '#94A3B8',
-    marginTop: 2,
+    fontWeight: '600',
+    color: 'rgba(255, 255, 255, 0.8)',
   },
-  friendCardRight: {
+  cardBalanceText: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    marginTop: 4,
+  },
+  badgeWrapper: {
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    alignSelf: 'flex-start',
+  },
+  badgeText: {
+    fontSize: 9,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  cardMiddle: {
+    paddingHorizontal: 20,
+    marginVertical: 4,
+  },
+  cardNumberText: {
+    fontSize: 14,
+    letterSpacing: 1.5,
+    fontWeight: '500',
+    color: 'rgba(255, 255, 255, 0.95)',
+  },
+  cardFooterStrip: {
+    height: 48,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+  },
+  footerLabel: {
+    color: 'rgba(255, 255, 255, 0.6)',
+    fontSize: 9,
+    fontWeight: '600',
+  },
+  footerName: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  footerRight: {
     flexDirection: 'row',
     alignItems: 'center',
+    maxWidth: '65%',
   },
-  balanceText: {
-    fontFamily: 'System',
-    fontSize: 12,
-    fontWeight: '600',
-    textAlign: 'right',
-  },
-  owesMe: {
-    color: '#10B981',
-  },
-  iOwe: {
-    color: '#EF4444',
-  },
-  settled: {
-    color: '#64748B',
+  footerEmail: {
+    color: 'rgba(255, 255, 255, 0.8)',
+    fontSize: 11,
+    fontWeight: '500',
   },
 });
