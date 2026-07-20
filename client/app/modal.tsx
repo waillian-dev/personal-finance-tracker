@@ -20,6 +20,7 @@ import { Wallet, Category } from '../types';
 import { useAuthStore } from '../store/authStore';
 import { formatCurrency } from '../utils/currency';
 import { useThemeColors } from '../hooks/useThemeColors';
+import CalendarDatePickerModal from '../components/CalendarDatePickerModal';
 
 // Solar Icons
 import { AltArrowLeft } from '@solar-icons/react-native/Outline';
@@ -538,81 +539,16 @@ export default function AddTransactionModal() {
       </ScrollView>
 
       {/* 1. Custom Calendar Date Picker Modal */}
-      <Modal
+      <CalendarDatePickerModal
         visible={showDatePicker}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setShowDatePicker(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={[styles.calendarCard, { backgroundColor: colors.card }]}>
-            {/* Calendar Header */}
-            <View style={styles.calendarHeader}>
-              <TouchableOpacity onPress={() => handleMonthChange('prev')}>
-                <AltArrowLeft size={22} color={colors.text} />
-              </TouchableOpacity>
-              <Text style={[styles.calendarMonthName, { color: colors.text }]}>
-                {calendarMonth.toLocaleString(undefined, { month: 'long', year: 'numeric' })}
-              </Text>
-              <TouchableOpacity onPress={() => handleMonthChange('next')}>
-                <AltArrowRight size={22} color={colors.text} />
-              </TouchableOpacity>
-            </View>
-
-            {/* Week headers */}
-            <View style={styles.weekHeadersRow}>
-              {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map((w, index) => (
-                <Text key={index} style={[styles.weekLabel, { color: colors.textSecondary }]}>
-                  {w}
-                </Text>
-              ))}
-            </View>
-
-            {/* Days grid */}
-            <View style={styles.daysGrid}>
-              {getDaysInMonth(calendarMonth).map((d, index) => {
-                if (!d) {
-                  return <View key={index} style={styles.dayCellEmpty} />;
-                }
-                const isSelected = d.toDateString() === transactionDate.toDateString();
-                const isToday = d.toDateString() === new Date().toDateString();
-                return (
-                  <TouchableOpacity
-                    key={index}
-                    style={[
-                      styles.dayCellButton,
-                      isSelected && styles.dayCellActive,
-                      isToday && !isSelected && { borderColor: '#3B82F6', borderWidth: 1 }
-                    ]}
-                    onPress={() => {
-                      setTransactionDate(d);
-                      setShowDatePicker(false);
-                    }}
-                  >
-                    <Text
-                      style={[
-                        styles.dayText,
-                        { color: colors.text },
-                        isSelected && { color: '#FFFFFF', fontWeight: 'bold' }
-                      ]}
-                    >
-                      {d.getDate()}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-
-            {/* Cancel Calendar Button */}
-            <TouchableOpacity
-              style={[styles.calendarCancelBtn, { backgroundColor: colors.inputBg }]}
-              onPress={() => setShowDatePicker(false)}
-            >
-              <Text style={{ color: colors.text, fontWeight: '700' }}>Cancel</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
+        initialDate={`${transactionDate.getFullYear()}-${String(transactionDate.getMonth() + 1).padStart(2, '0')}-${String(transactionDate.getDate()).padStart(2, '0')}`}
+        onClose={() => setShowDatePicker(false)}
+        onSelectDate={(dateStr) => {
+          const [y, m, d] = dateStr.split('-').map(Number);
+          setTransactionDate(new Date(y, m - 1, d));
+        }}
+        title="Select Transaction Date"
+      />
 
       {/* 2. Source Wallet Dropdown Modal */}
       <Modal
