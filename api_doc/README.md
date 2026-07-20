@@ -85,7 +85,7 @@ This document describes the REST API endpoints provided by the MERN backend of t
       "notificationSalary": true,
       "notificationExpenseLimit": true,
       "notificationMonthlyFee": true,
-      "theme": "system"
+      "theme": "dark"
     }
   }
   ```
@@ -102,23 +102,7 @@ This document describes the REST API endpoints provided by the MERN backend of t
     "notificationSalary": false,
     "notificationExpenseLimit": true,
     "notificationMonthlyFee": false,
-    "theme": "light"
-  }
-  ```
-* **Response (Success 200)**:
-  ```json
-  {
-    "success": true,
-    "data": {
-      "_id": "64bdf349a...",
-      "name": "Jane Smith",
-      "currency": "MMK",
-      "monthlySalary": 6000,
-      "notificationSalary": false,
-      "notificationExpenseLimit": true,
-      "notificationMonthlyFee": false,
-      "theme": "light"
-    }
+    "theme": "dark"
   }
   ```
 
@@ -129,24 +113,6 @@ This document describes the REST API endpoints provided by the MERN backend of t
 ### Get All Wallets
 * **Route**: `GET /api/wallets`
 * **Access**: Private (Protected)
-* **Response (Success 200)**:
-  ```json
-  {
-    "success": true,
-    "count": 2,
-    "data": [
-      {
-        "_id": "64bdf35aa...",
-        "name": "KBZ Bank",
-        "balance": 450000,
-        "currency": "MMK",
-        "color": "#3B82F6",
-        "type": "bank",
-        "icon": "account-balance"
-      }
-    ]
-  }
-  ```
 
 ### Create Wallet
 * **Route**: `POST /api/wallets`
@@ -154,65 +120,23 @@ This document describes the REST API endpoints provided by the MERN backend of t
 * **Request Payload**:
   ```json
   {
-    "name": "Cash Wallet",
-    "balance": 15000,
+    "name": "KBZ Bank",
+    "balance": 500000,
     "currency": "MMK",
-    "color": "#10B981",
-    "type": "cash",
-    "icon": "account-balance-wallet",
+    "color": "#3B82F6",
+    "type": "bank",
+    "icon": "account-balance",
     "creditLimit": 0
-  }
-  ```
-* **Response (Success 201)**:
-  ```json
-  {
-    "success": true,
-    "data": {
-      "_id": "64bdf36bb...",
-      "userId": "64bdf349a...",
-      "name": "Cash Wallet",
-      "balance": 15000,
-      "currency": "MMK",
-      "color": "#10B981",
-      "type": "cash",
-      "icon": "account-balance-wallet"
-    }
   }
   ```
 
 ### Update Wallet
 * **Route**: `PUT /api/wallets/:id`
 * **Access**: Private (Protected)
-* **Request Payload**:
-  ```json
-  {
-    "name": "Cash Pocket",
-    "color": "#EC4899"
-  }
-  ```
-* **Response (Success 200)**:
-  ```json
-  {
-    "success": true,
-    "data": {
-      "_id": "64bdf36bb...",
-      "name": "Cash Pocket",
-      "balance": 15000,
-      "color": "#EC4899"
-    }
-  }
-  ```
 
 ### Delete Wallet
 * **Route**: `DELETE /api/wallets/:id`
 * **Access**: Private (Protected)
-* **Response (Success 200)**:
-  ```json
-  {
-    "success": true,
-    "data": {}
-  }
-  ```
 
 ---
 
@@ -220,28 +144,9 @@ This document describes the REST API endpoints provided by the MERN backend of t
 
 ### Get Categories
 * **Route**: `GET /api/categories`
-* **Access**: Private (Protected)
-* **Response (Success 200)**:
-  ```json
-  {
-    "success": true,
-    "count": 10,
-    "data": [
-      {
-        "_id": "64bdf37cc...",
-        "userId": null,
-        "name": "Food & Drinks",
-        "type": "expense",
-        "emoji": "🍔",
-        "color": "#EF4444"
-      }
-    ]
-  }
-  ```
 
 ### Create Custom Category
 * **Route**: `POST /api/categories`
-* **Access**: Private (Protected)
 * **Request Payload**:
   ```json
   {
@@ -251,55 +156,12 @@ This document describes the REST API endpoints provided by the MERN backend of t
     "emoji": "🎬"
   }
   ```
-* **Response (Success 201)**:
-  ```json
-  {
-    "success": true,
-    "data": {
-      "_id": "64bdf38dd...",
-      "userId": "64bdf349a...",
-      "name": "Subscriptions",
-      "type": "expense",
-      "color": "#8B5CF6",
-      "emoji": "🎬"
-    }
-  }
-  ```
 
 ### Update Custom Category
 * **Route**: `PUT /api/categories/:id`
-* **Access**: Private (Protected)
-* **Request Payload**:
-  ```json
-  {
-    "name": "Tech Subscriptions",
-    "emoji": "💻",
-    "color": "#6366F1"
-  }
-  ```
-* **Response (Success 200)**:
-  ```json
-  {
-    "success": true,
-    "data": {
-      "_id": "64bdf38dd...",
-      "name": "Tech Subscriptions",
-      "emoji": "💻",
-      "color": "#6366F1"
-    }
-  }
-  ```
 
 ### Delete Custom Category
 * **Route**: `DELETE /api/categories/:id`
-* **Access**: Private (Protected)
-* **Response (Success 200)**:
-  ```json
-  {
-    "success": true,
-    "message": "Category deleted successfully"
-  }
-  ```
 
 ---
 
@@ -307,43 +169,10 @@ This document describes the REST API endpoints provided by the MERN backend of t
 
 ### Get Transactions (Filtered)
 * **Route**: `GET /api/transactions`
-* **Access**: Private (Protected)
-* **Query Parameters**:
-  - `limit`: number
-  - `startDate`: YYYY-MM-DD
-  - `endDate`: YYYY-MM-DD
-  - `type`: `income` | `expense` | `transfer`
-  - `walletId`: string
-  - `categoryId`: string
-* **Response (Success 200)**:
-  ```json
-  {
-    "success": true,
-    "count": 1,
-    "data": [
-      {
-        "_id": "64bdf39ee...",
-        "amount": 2500,
-        "type": "expense",
-        "description": "Lunch split",
-        "date": "2026-07-15T00:00:00.000Z",
-        "walletId": {
-          "_id": "64bdf36bb...",
-          "name": "Cash Pocket"
-        },
-        "categoryId": {
-          "_id": "64bdf37cc...",
-          "name": "Food & Drinks",
-          "emoji": "🍔"
-        }
-      }
-    ]
-  }
-  ```
+* **Query Parameters**: `limit`, `startDate`, `endDate`, `type`, `walletId`, `categoryId`
 
 ### Create Transaction
 * **Route**: `POST /api/transactions`
-* **Access**: Private (Protected)
 * **Request Payload**:
   ```json
   {
@@ -355,170 +184,122 @@ This document describes the REST API endpoints provided by the MERN backend of t
     "destinationWalletId": null
   }
   ```
-* **Response (Success 201)**:
-  ```json
-  {
-    "success": true,
-    "data": {
-      "_id": "64bdf39ee...",
-      "amount": 12000,
-      "type": "expense",
-      "description": "Weekly grocery list"
-    }
-  }
-  ```
-
-### Get Transaction by ID
-* **Route**: `GET /api/transactions/:id`
-* **Access**: Private (Protected)
 
 ### Update Transaction
 * **Route**: `PUT /api/transactions/:id`
-* **Access**: Private (Protected)
-* **Request Payload**:
-  ```json
-  {
-    "amount": 14000,
-    "description": "Weekly grocery list (adjusted)"
-  }
-  ```
-* **Response (Success 200)**:
-  ```json
-  {
-    "success": true,
-    "data": {
-      "_id": "64bdf39ee...",
-      "amount": 14000,
-      "description": "Weekly grocery list (adjusted)"
-    }
-  }
-  ```
 
 ### Delete Transaction
 * **Route**: `DELETE /api/transactions/:id`
-* **Access**: Private (Protected)
 
 ---
 
-## 5. Recurring Setup
+## 5. Savings Goals
 
-### Create Auto-Recurring Transaction Setup
-* **Route**: `POST /api/recurring`
+### Get All Savings Goals
+* **Route**: `GET /api/goals`
+* **Access**: Private (Protected)
+
+### Create Savings Goal
+* **Route**: `POST /api/goals`
 * **Access**: Private (Protected)
 * **Request Payload**:
   ```json
   {
-    "name": "Monthly Netflix",
-    "type": "expense",
-    "amount": 15.99,
+    "name": "New Car Fund",
+    "targetAmount": 15000,
+    "currentAmount": 2000,
+    "targetDate": "2026-12-31T00:00:00.000Z",
+    "color": "#10B981"
+  }
+  ```
+
+### Add Contribution to Goal
+* **Route**: `POST /api/goals/:id/contribute`
+* **Access**: Private (Protected)
+* **Request Payload**:
+  ```json
+  {
+    "amount": 500,
     "walletId": "64bdf36bb...",
-    "categoryId": "64bdf38dd...",
+    "note": "Monthly savings allocation"
+  }
+  ```
+
+### Withdraw from Goal
+* **Route**: `POST /api/goals/:id/withdraw`
+* **Access**: Private (Protected)
+* **Request Payload**:
+  ```json
+  {
+    "amount": 200,
+    "walletId": "64bdf36bb...",
+    "note": "Emergency maintenance"
+  }
+  ```
+
+---
+
+## 6. Auto-Recurring Transactions
+
+### Get Recurring Setups
+* **Route**: `GET /api/recurring`
+
+### Create Recurring Setup
+* **Route**: `POST /api/recurring`
+* **Request Payload**:
+  ```json
+  {
+    "name": "Monthly Salary",
+    "type": "income",
+    "amount": 3500,
+    "walletId": "64bdf36bb...",
+    "categoryId": "64bdf37cc...",
     "frequency": "monthly",
     "nextDueDate": "2026-08-01T00:00:00.000Z"
   }
   ```
-* **Response (Success 201)**:
-  ```json
-  {
-    "success": true,
-    "data": {
-      "_id": "64bdf40ff...",
-      "name": "Monthly Netflix",
-      "nextDueDate": "2026-08-01T00:00:00.000Z",
-      "isActive": true
-    }
-  }
-  ```
+
+### Toggle Active Status
+* **Route**: `PUT /api/recurring/:id/toggle`
+
+### Delete Setup
+* **Route**: `DELETE /api/recurring/:id`
 
 ---
 
-## 6. Friends & Split Ledger
+## 7. Friends & Split Ledgers
 
 ### Send Friend Request
 * **Route**: `POST /api/friends/request`
-* **Access**: Private (Protected)
-* **Request Payload**:
-  ```json
-  {
-    "email": "friend@example.com"
-  }
-  ```
-* **Response (Success 201)**:
-  ```json
-  {
-    "success": true,
-    "message": "Friend request sent"
-  }
-  ```
+* **Request Payload**: `{ "email": "friend@example.com" }`
 
-### Get Friends List & Pending Requests
+### Get Friends & Pending Lists
 * **Route**: `GET /api/friends`
-* **Access**: Private (Protected)
-* **Response (Success 200)**:
-  ```json
-  {
-    "success": true,
-    "data": {
-      "friends": [
-        {
-          "friendshipId": "64bdf77ff...",
-          "friend": {
-            "_id": "64bdf999z...",
-            "name": "Bob Friend",
-            "email": "friend@example.com"
-          },
-          "netBalance": 25.50
-        }
-      ],
-      "pendingIncoming": [],
-      "pendingOutgoing": []
-    }
-  }
-  ```
 
-### Respond to Friend Request
+### Respond to Request
 * **Route**: `PUT /api/friends/request/:id`
-* **Access**: Private (Protected)
-* **Request Payload**:
-  ```json
-  {
-    "status": "accepted" // or "rejected"
-  }
-  ```
+* **Request Payload**: `{ "status": "accepted" }` // or "rejected"
 
 ### Log Shared Split Expense
 * **Route**: `POST /api/ledger`
-* **Access**: Private (Protected)
 * **Request Payload**:
   ```json
   {
-    "description": "Starbucks Split",
-    "amount": 10.00,
+    "description": "Dinner Split",
+    "amount": 40.00,
     "friendId": "64bdf999z...",
     "paidByMe": true,
     "split50": true
   }
   ```
 
-### Settle Ledger with Custom Payment and Wallet Sync
+### Settle Up Payment with Wallet Sync
 * **Route**: `POST /api/ledger/pay`
-* **Access**: Private (Protected)
 * **Request Payload**:
   ```json
   {
     "friendId": "64bdf999z...",
-    "amount": 25.50,
-    "walletId": "64bdf36bb..." // Optional wallet for standard transaction recording
-  }
-  ```
-* **Response (Success 200)**:
-  ```json
-  {
-    "success": true,
-    "data": {
-      "description": "Settlement Payment",
-      "amount": 25.50,
-      "settled": true
-    }
+    "amount": 20.00,
+    "walletId": "64bdf36bb..."
   }
   ```
