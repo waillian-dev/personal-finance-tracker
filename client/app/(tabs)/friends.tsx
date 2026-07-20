@@ -7,9 +7,10 @@ import {
   TextInput,
   TouchableOpacity,
   ActivityIndicator,
-  SafeAreaView,
   Animated,
+  Platform,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { FontAwesome } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import api from '../../services/api';
@@ -200,7 +201,7 @@ export default function FriendsScreen() {
   }
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }, Platform.OS === 'android' && { paddingTop: 20 }]}>
       {/* Centered screen title */}
       <Text style={[styles.screenTitle, { color: colors.text }]}>Friends & Ledgers</Text>
 

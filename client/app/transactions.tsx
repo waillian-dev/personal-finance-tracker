@@ -6,10 +6,11 @@ import {
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
-  SafeAreaView,
   TextInput,
   RefreshControl,
+  Platform,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { FontAwesome } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import api from '../services/api';
@@ -18,10 +19,10 @@ import { formatCurrency } from '../utils/currency';
 import { Transaction, Wallet, Category } from '../types';
 import { useThemeColors } from '../hooks/useThemeColors';
 
-// Solar Icons imports from Bold style
+// Solar Icons
+import { AltArrowLeft } from '@solar-icons/react-native/outline';
 import * as SolarBold from '@solar-icons/react-native/Bold';
 import {
-  AltArrowLeft,
   Magnifier,
   Dollar,
   Home2,
@@ -157,7 +158,7 @@ export default function TransactionsScreen() {
   const dateKeys = Object.keys(groupedTxs);
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }, Platform.OS === 'android' && { paddingTop: 20 }]}>
       {/* Header */}
       <View style={[styles.header, { borderBottomColor: colors.border }]}>
         <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>

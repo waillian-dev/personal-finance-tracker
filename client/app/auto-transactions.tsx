@@ -8,10 +8,11 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Switch,
-  SafeAreaView,
   Modal,
   FlatList,
+  Platform,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { FontAwesome } from '@expo/vector-icons';
 import api from '../services/api';
@@ -22,9 +23,11 @@ import { useThemeColors } from '../hooks/useThemeColors';
 import CustomAlert from '../components/CustomAlert';
 
 // Solar Icons
+import { AltArrowLeft } from '@solar-icons/react-native/outline';
+
+// Solar Icons
 import * as SolarBold from '@solar-icons/react-native/Bold';
 import {
-  AltArrowLeft,
   AltArrowDown,
   Refresh,
 } from '@solar-icons/react-native/Bold';

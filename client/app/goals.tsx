@@ -8,11 +8,12 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   RefreshControl,
-  SafeAreaView,
   Animated,
   Dimensions,
   Modal,
+  Platform,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { FontAwesome } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import api from '../services/api';
@@ -23,11 +24,11 @@ import CustomAlert from '../components/CustomAlert';
 import { useThemeColors } from '../hooks/useThemeColors';
 
 // Solar Icons
+import { AltArrowLeft } from '@solar-icons/react-native/outline';
 import * as SolarBold from '@solar-icons/react-native/Bold';
 import {
   AddCircle,
   AltArrowRight,
-  AltArrowLeft,
   Widget,
 } from '@solar-icons/react-native/Bold';
 
@@ -308,7 +309,7 @@ export default function GoalsScreen() {
   }
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }, Platform.OS === 'android' && { paddingTop: 20 }]}>
       {/* Header with back button */}
       <View style={[styles.header, { borderBottomColor: colors.border }]}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>

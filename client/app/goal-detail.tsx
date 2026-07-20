@@ -8,10 +8,11 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Dimensions,
-  SafeAreaView,
   Modal,
   FlatList,
+  Platform,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { FontAwesome } from '@expo/vector-icons';
 import api from '../services/api';
@@ -22,9 +23,9 @@ import { useThemeColors } from '../hooks/useThemeColors';
 import CustomAlert from '../components/CustomAlert';
 
 // Solar Icons
+import { AltArrowLeft } from '@solar-icons/react-native/outline';
 import * as SolarBold from '@solar-icons/react-native/Bold';
 import {
-  AltArrowLeft,
   AltArrowDown,
   Dollar,
   Widget,
@@ -262,7 +263,7 @@ export default function GoalDetailScreen() {
   const remainingAmount = Math.max(0, goal.targetAmount - goal.currentAmount);
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }, Platform.OS === 'android' && { paddingTop: 20 }]}>
       {/* Header */}
       <View style={[styles.header, { borderBottomColor: colors.border }]}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>

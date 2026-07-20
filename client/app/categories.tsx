@@ -7,11 +7,12 @@ import {
   TextInput,
   TouchableOpacity,
   ActivityIndicator,
-  SafeAreaView,
   Animated,
   Dimensions,
   Modal,
+  Platform,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { FontAwesome } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import api from '../services/api';
@@ -19,10 +20,10 @@ import { Category } from '../types';
 import CustomAlert from '../components/CustomAlert';
 import { useThemeColors } from '../hooks/useThemeColors';
 
-// Import all Bold Solar Icons
+// Solar Icons
+import { AltArrowLeft } from '@solar-icons/react-native/outline';
 import * as SolarBold from '@solar-icons/react-native/Bold';
 import {
-  AltArrowLeft,
   AddCircle,
   Bus,
   Home,
@@ -232,7 +233,7 @@ export default function CategoriesScreen() {
   const filteredCategories = categories.filter((c) => c.type === activeTab);
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }, Platform.OS === 'android' && { paddingTop: 20 }]}>
       {/* Header */}
       <View style={[styles.header, { borderBottomColor: colors.border }]}>
         <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>

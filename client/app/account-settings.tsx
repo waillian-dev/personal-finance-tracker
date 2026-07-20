@@ -7,8 +7,9 @@ import {
   TextInput,
   TouchableOpacity,
   ActivityIndicator,
-  SafeAreaView,
+  Platform,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import api from '../services/api';
 import { useAuthStore } from '../store/authStore';
@@ -17,8 +18,8 @@ import { useThemeColors } from '../hooks/useThemeColors';
 import CustomAlert from '../components/CustomAlert';
 
 // Solar Icons
+import { AltArrowLeft } from '@solar-icons/react-native/outline';
 import {
-  AltArrowLeft,
   User,
   Letter,
   Dollar,
@@ -86,7 +87,7 @@ export default function AccountSettingsScreen() {
   };
 
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }, Platform.OS === 'android' && { paddingTop: 20 }]}>
       {/* Header */}
       <View style={[styles.header, { borderBottomColor: colors.border }]}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>

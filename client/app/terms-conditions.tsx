@@ -5,18 +5,19 @@ import {
   View,
   ScrollView,
   TouchableOpacity,
-  SafeAreaView,
+  Platform,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useThemeColors } from '../hooks/useThemeColors';
-import { AltArrowLeft } from '@solar-icons/react-native/Bold';
+import { AltArrowLeft } from '@solar-icons/react-native/outline';
 
 export default function TermsConditionsScreen() {
   const { colors } = useThemeColors();
   const router = useRouter();
 
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }, Platform.OS === 'android' && { paddingTop: 20 }]}>
       {/* Header */}
       <View style={[styles.header, { borderBottomColor: colors.border }]}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>

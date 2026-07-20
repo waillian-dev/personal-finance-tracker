@@ -7,12 +7,13 @@ import {
   TextInput,
   TouchableOpacity,
   ActivityIndicator,
-  SafeAreaView,
   Animated,
   Dimensions,
   Modal,
   Switch,
+  Platform,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { FontAwesome } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import api from '../services/api';
@@ -22,8 +23,8 @@ import CustomAlert from '../components/CustomAlert';
 import { useThemeColors } from '../hooks/useThemeColors';
 
 // Solar Icons
+import { AltArrowLeft } from '@solar-icons/react-native/outline';
 import {
-  AltArrowLeft,
   Widget,
   AddCircle,
   ArrowLeftDown,
@@ -320,7 +321,7 @@ export default function FriendLedgerScreen() {
   const cardColor = owesMe ? '#10B981' : iOwe ? '#EF4444' : '#64748B';
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }, Platform.OS === 'android' && { paddingTop: 20 }]}>
       {/* Header */}
       <View style={[styles.header, { borderBottomColor: colors.border }]}>
         <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>

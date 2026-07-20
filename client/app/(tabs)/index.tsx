@@ -8,10 +8,11 @@ import {
   RefreshControl,
   TouchableOpacity,
   ActivityIndicator,
-  SafeAreaView,
   Animated,
   Image,
+  Platform,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import api from '../../services/api';
 import { Wallet, Transaction } from '../../types';
@@ -350,7 +351,7 @@ export default function DashboardScreen() {
     .reduce((sum, t) => sum + Number(t.amount), 0);
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }, Platform.OS === 'android' && { paddingTop: 20 }]}>
       <ScrollView
         contentContainerStyle={styles.scrollContainer}
         refreshControl={
@@ -690,6 +691,7 @@ export default function DashboardScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    // paddingTop: 32,
   },
   scrollContainer: {
     paddingBottom: 110,

@@ -8,11 +8,12 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   RefreshControl,
-  SafeAreaView,
   Animated,
   Dimensions,
   Modal,
+  Platform,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { FontAwesome } from '@expo/vector-icons';
 import api from '../../services/api';
 import { Wallet, Transaction } from '../../types';
@@ -417,7 +418,7 @@ export default function WalletsScreen() {
   }
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }, Platform.OS === 'android' && { paddingTop: 20 }]}>
       <ScrollView
         contentContainerStyle={styles.scrollContainer}
         refreshControl={

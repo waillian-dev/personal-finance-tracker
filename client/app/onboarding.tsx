@@ -4,9 +4,10 @@ import {
   Text,
   View,
   TouchableOpacity,
-  SafeAreaView,
   Dimensions,
+  Platform,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { FontAwesome } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useAuthStore } from '../store/authStore';
@@ -59,7 +60,7 @@ export default function OnboardingScreen() {
   const slide = SLIDES[activeSlide];
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, Platform.OS === 'android' && { paddingTop: 20 }]}>
       {/* Header Skip Button */}
       <View style={styles.header}>
         {activeSlide < SLIDES.length - 1 ? (

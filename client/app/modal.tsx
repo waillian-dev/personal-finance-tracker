@@ -8,10 +8,11 @@ import {
   ActivityIndicator,
   ScrollView,
   Dimensions,
-  SafeAreaView,
   Modal,
   FlatList,
+  Platform,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams, Stack } from 'expo-router';
 import { FontAwesome } from '@expo/vector-icons';
 import api from '../services/api';
@@ -21,9 +22,9 @@ import { formatCurrency } from '../utils/currency';
 import { useThemeColors } from '../hooks/useThemeColors';
 
 // Solar Icons
+import { AltArrowLeft } from '@solar-icons/react-native/outline';
 import * as SolarBold from '@solar-icons/react-native/Bold';
 import {
-  AltArrowLeft,
   AltArrowRight,
   AltArrowDown,
   Notes,
@@ -278,7 +279,7 @@ export default function AddTransactionModal() {
   const destWallet = wallets.find(w => w._id === selectedDestWalletId);
 
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }, Platform.OS === 'android' && { paddingTop: 20 }]}>
 
       {/* Header */}
       <View style={[styles.header, { borderBottomColor: colors.border }]}>

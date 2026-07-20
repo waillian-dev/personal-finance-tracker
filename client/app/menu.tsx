@@ -6,14 +6,15 @@ import {
   ScrollView,
   TextInput,
   TouchableOpacity,
-  SafeAreaView,
+  Platform,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useThemeColors } from '../hooks/useThemeColors';
 
-// Solar Icons imports from Bold style
+// Solar Icons
+import { AltArrowLeft } from '@solar-icons/react-native/outline';
 import {
-  AltArrowLeft,
   Magnifier,
   AddCircle,
   Folder,
@@ -123,7 +124,7 @@ export default function MenuScreen() {
   );
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }, Platform.OS === 'android' && { paddingTop: 20 }]}>
       {/* Header */}
       <View style={[styles.header, { borderBottomColor: colors.border }]}>
         <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
