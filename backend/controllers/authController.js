@@ -143,14 +143,27 @@ const refreshSession = async (req, res) => {
       return res.status(400).json({ success: false, error: 'Refresh token is required' });
     }
 
-    // Verify token
-    const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET || 'supersecretrefreshjwtkey123456');
+    // Verify token safely
+    let decoded;
+    try {
+      decoded = jwt.verify(
+        refreshToken,
+        process.env.JWT_REFRESH_SECRET || 'supersecretrefreshjwtkey123456'
+      );
+    } catch (jwtErr) {
+      return res.status(401).json({ success: false, error: 'Invalid or expired refresh token' });
+    }
 
     // Check user with decoded id and matching refresh token
     const user = await User.findById(decoded.id);
 
-    if (!user || user.refreshToken !== refreshToken) {
-      return res.status(401).json({ success: false, error: 'Invalid refresh token' });
+    if (!user) {
+      return res.status(401).json({ success: false, error: 'User not found' });
+    }
+
+    // If user's stored token exists, ensure it matches
+    if (user.refreshToken && user.refreshToken !== refreshToken) {
+      return res.status(401).json({ success: false, error: 'Refresh token mismatch or revoked' });
     }
 
     // Generate new tokens
@@ -169,7 +182,7 @@ const refreshSession = async (req, res) => {
     });
   } catch (error) {
     console.error('Refresh token error:', error);
-    res.status(401).json({ success: false, error: 'Invalid refresh token' });
+    res.status(401).json({ success: false, error: 'Refresh failed' });
   }
 };
 
