@@ -282,13 +282,13 @@ export default function AddTransactionModal() {
 
       {/* Header */}
       <View style={[styles.header, { borderBottomColor: colors.border }]}>
-        <TouchableOpacity onPress={() => router.back()}>
-          <Text style={styles.cancelText}>Cancel</Text>
+        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+          <AltArrowLeft size={22} color={colors.text} />
         </TouchableOpacity>
         <Text style={[styles.headerTitle, { color: colors.text }]}>
           {editId ? 'Edit Transaction' : 'New Transaction'}
         </Text>
-        <View style={{ width: 50 }} />
+        <View style={{ width: 28 }} />
       </View>
 
       <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
@@ -699,6 +699,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingVertical: 16,
     borderBottomWidth: 1,
+  },
+  backButton: {
+    padding: 4,
   },
   cancelText: {
     color: '#3B82F6',

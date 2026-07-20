@@ -340,6 +340,15 @@ export default function DashboardScreen() {
   const headerText = isDark ? '#FFFFFF' : '#1E1B4B';
   const headerTextSecondary = isDark ? '#94A3B8' : '#475569';
 
+  // Monthly total income and expense calculations for dashboard card
+  const totalIncome = monthTransactions
+    .filter((t) => t.type === 'income')
+    .reduce((sum, t) => sum + Number(t.amount), 0);
+
+  const totalExpense = monthTransactions
+    .filter((t) => t.type === 'expense')
+    .reduce((sum, t) => sum + Number(t.amount), 0);
+
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <ScrollView
@@ -411,7 +420,7 @@ export default function DashboardScreen() {
           </View>
         </View>
 
-        {/* Receivable / Payable Overlapping Card */}
+        {/* Total Income / Total Expense Overlapping Card */}
         <Animated.View style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}>
           <View style={[styles.overlapCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
             <View style={styles.overlapColumn}>
@@ -419,8 +428,8 @@ export default function DashboardScreen() {
                 <ArrowLeftDown size={20} color="#10B981" />
               </View>
               <View style={styles.overlapInfo}>
-                <Text style={[styles.overlapLabel, { color: colors.textSecondary }]}>Receivable</Text>
-                <Text style={[styles.overlapValue, { color: colors.text }]}>{formatCurrency(totalReceivables, user?.currency)}</Text>
+                <Text style={[styles.overlapLabel, { color: colors.textSecondary }]}>Total Income</Text>
+                <Text style={[styles.overlapValue, { color: '#10B981' }]}>{formatCurrency(totalIncome, user?.currency)}</Text>
               </View>
             </View>
 
@@ -431,8 +440,8 @@ export default function DashboardScreen() {
                 <ArrowRightUp size={20} color="#EF4444" />
               </View>
               <View style={styles.overlapInfo}>
-                <Text style={[styles.overlapLabel, { color: colors.textSecondary }]}>Payable</Text>
-                <Text style={[styles.overlapValue, { color: colors.text }]}>{formatCurrency(totalPayables, user?.currency)}</Text>
+                <Text style={[styles.overlapLabel, { color: colors.textSecondary }]}>Total Expense</Text>
+                <Text style={[styles.overlapValue, { color: '#EF4444' }]}>{formatCurrency(totalExpense, user?.currency)}</Text>
               </View>
             </View>
           </View>
