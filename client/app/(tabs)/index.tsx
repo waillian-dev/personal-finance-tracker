@@ -126,7 +126,7 @@ export default function DashboardScreen() {
       const currentMonthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString();
       const [walletsRes, transRes, monthTransRes, friendsRes] = await Promise.all([
         api.get('/wallets'),
-        api.get('/transactions?limit=10'),
+        api.get('/transactions?limit=5'),
         api.get(`/transactions?startDate=${currentMonthStart}&limit=1000`),
         api.get('/friends'),
       ]);
@@ -218,32 +218,33 @@ export default function DashboardScreen() {
     .filter(w => w.type === 'credit_card')
     .reduce((sum, w) => sum + Math.abs(Math.min(0, Number(w.balance))), 0);
 
-  // Get spending data for line chart
+  // Get dynamic spending data for line chart
   const getTrendData = () => {
     const dailyData: { date: Date; amount: number; dateLabel: string }[] = [];
     const now = new Date();
-    // Default placeholder wave coordinates that we merge with real transaction amounts
-    const baseWave = [12, 10, 15, 200, 950, 150, 50, 30, 20, 15, 12, 45, 110, 50, 20, 250, 501, 220, 120, 80, 55, 90, 70, 180, 310, 290, 480, 220, 380, 350];
     
+    // Build array of last 30 days starting with 0 amount
     for (let i = 0; i < 30; i++) {
       const d = new Date();
       d.setDate(now.getDate() - (29 - i));
       dailyData.push({
         date: d,
-        amount: baseWave[i], // default base line wave
+        amount: 0,
         dateLabel: d.toLocaleDateString(undefined, { day: 'numeric', month: 'short' }),
       });
     }
 
-    // Accumulate actual expense transactions in user database for current month
+    // Accumulate actual expense transactions for exact matching day
     monthTransactions.forEach((t) => {
       if (t.type === 'expense') {
         const txDate = new Date(t.date);
-        const diffTime = Math.abs(now.getTime() - txDate.getTime());
-        const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-        const index = 29 - diffDays;
-        if (index >= 0 && index < 30) {
-          dailyData[index].amount += Number(t.amount);
+        const dayEntry = dailyData.find(
+          (d) => d.date.getFullYear() === txDate.getFullYear() &&
+                 d.date.getMonth() === txDate.getMonth() &&
+                 d.date.getDate() === txDate.getDate()
+        );
+        if (dayEntry) {
+          dayEntry.amount += Number(t.amount);
         }
       }
     });
@@ -253,10 +254,10 @@ export default function DashboardScreen() {
 
   const trendData = getTrendData();
 
-  // Find the peak index
+  // Find peak index among days with actual spending
   const getPeakIndex = () => {
-    let maxVal = -1;
-    let maxIdx = 16; // default fallback index
+    let maxVal = 0;
+    let maxIdx = -1;
     trendData.forEach((d, idx) => {
       if (d.amount > maxVal) {
         maxVal = d.amount;
@@ -267,7 +268,8 @@ export default function DashboardScreen() {
   };
   const peakIndex = getPeakIndex();
 
-  const maxAmount = Math.max(...trendData.map(d => d.amount), 1200);
+  const rawMax = Math.max(...trendData.map(d => d.amount));
+  const maxAmount = rawMax > 0 ? Math.ceil(rawMax * 1.1) : 100;
   
   const getCoordinates = (index: number, amount: number) => {
     const startX = 45;
@@ -275,7 +277,7 @@ export default function DashboardScreen() {
     const startY = 15;
     const endY = 135;
     const x = startX + (index / 29) * (endX - startX);
-    const ratio = Math.min(amount / maxAmount, 1);
+    const ratio = maxAmount > 0 ? Math.min(amount / maxAmount, 1) : 0;
     const y = endY - ratio * (endY - startY);
     return { x, y };
   };
@@ -287,14 +289,14 @@ export default function DashboardScreen() {
     }).join(' ');
   };
 
-  const peakPointData = trendData[peakIndex];
-  const peakCoords = getCoordinates(peakIndex, peakPointData.amount);
-  const peakPoint = {
+  const peakPointData = peakIndex >= 0 ? trendData[peakIndex] : null;
+  const peakCoords = peakPointData ? getCoordinates(peakIndex, peakPointData.amount) : null;
+  const peakPoint = (peakPointData && peakCoords && peakPointData.amount > 0) ? {
     x: peakCoords.x,
     y: peakCoords.y,
     amount: peakPointData.amount,
     dateLabel: peakPointData.dateLabel,
-  };
+  } : null;
 
   const getCategoryIcon = (category: any) => {
     if (category?.emoji) {
@@ -596,11 +598,11 @@ export default function DashboardScreen() {
               <Line x1="45" y1="135" x2="330" y2="135" stroke={isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.08)'} strokeWidth="1" />
 
               {/* Y Axis Text Labels */}
-              <SvgText x="35" y="19" fontSize="9" fontWeight="600" fill={colors.textSecondary} textAnchor="end">2000$</SvgText>
-              <SvgText x="35" y="49" fontSize="9" fontWeight="600" fill={colors.textSecondary} textAnchor="end">1000$</SvgText>
-              <SvgText x="35" y="79" fontSize="9" fontWeight="600" fill={colors.textSecondary} textAnchor="end">500$</SvgText>
-              <SvgText x="35" y="109" fontSize="9" fontWeight="600" fill={colors.textSecondary} textAnchor="end">100$</SvgText>
-              <SvgText x="35" y="139" fontSize="9" fontWeight="600" fill={colors.textSecondary} textAnchor="end">0</SvgText>
+              <SvgText x="38" y="19" fontSize="8" fontWeight="600" fill={colors.textSecondary} textAnchor="end">{formatCurrency(maxAmount, user?.currency)}</SvgText>
+              <SvgText x="38" y="49" fontSize="8" fontWeight="600" fill={colors.textSecondary} textAnchor="end">{formatCurrency(Math.round(maxAmount * 0.75), user?.currency)}</SvgText>
+              <SvgText x="38" y="79" fontSize="8" fontWeight="600" fill={colors.textSecondary} textAnchor="end">{formatCurrency(Math.round(maxAmount * 0.5), user?.currency)}</SvgText>
+              <SvgText x="38" y="109" fontSize="8" fontWeight="600" fill={colors.textSecondary} textAnchor="end">{formatCurrency(Math.round(maxAmount * 0.25), user?.currency)}</SvgText>
+              <SvgText x="38" y="139" fontSize="8" fontWeight="600" fill={colors.textSecondary} textAnchor="end">0</SvgText>
 
               {/* X Axis Date Labels */}
               <SvgText x="45" y="155" fontSize="8" fontWeight="600" fill={colors.textSecondary} textAnchor="start">{trendData[0]?.dateLabel}</SvgText>
@@ -706,7 +708,7 @@ export default function DashboardScreen() {
           </View>
         ) : (
           <FlatList
-            data={transactions}
+            data={transactions.slice(0, 5)}
             renderItem={renderTransactionItem}
             keyExtractor={(item) => item._id}
             scrollEnabled={false}
