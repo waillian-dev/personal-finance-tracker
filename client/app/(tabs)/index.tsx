@@ -424,15 +424,15 @@ export default function DashboardScreen() {
           {/* Active Balance section with Side-by-side chips */}
           <View style={styles.balanceSectionRow}>
             <View style={styles.balanceLeftColumn}>
-              <Text style={[styles.activeBalanceLabel, { color: headerTextSecondary }]}>Active Total Balance</Text>
-              <Text style={[styles.activeBalanceValue, { color: headerText }]}>{formatCurrency(netWorth, user?.currency)}</Text>
+              <Text style={[styles.activeBalanceLabel, { color: headerTextSecondary }]}>Asset</Text>
+              <Text style={[styles.activeBalanceValue, { color: headerText }]}>{formatCurrency(totalAssets, user?.currency)}</Text>
             </View>
             
             <View style={styles.chipsRightColumn}>
               <View style={[styles.statChip, { backgroundColor: isDark ? 'rgba(52, 211, 153, 0.15)' : 'rgba(16, 185, 129, 0.12)' }]}>
-                <Text style={[styles.statChipLabel, { color: headerTextSecondary }]}>Assets</Text>
+                <Text style={[styles.statChipLabel, { color: headerTextSecondary }]}>Active Total Balance</Text>
                 <Text style={[styles.statChipValue, { color: isDark ? '#34D399' : '#059669' }]}>
-                  {formatCurrency(totalAssets, user?.currency)}
+                  {formatCurrency(netWorth, user?.currency)}
                 </Text>
               </View>
               
