@@ -25,16 +25,22 @@ const predictionsRoutes = require('./routes/predictionsRoutes');
 const recurringRoutes = require('./routes/recurringRoutes');
 const friendRoutes = require('./routes/friendRoutes');
 const ledgerRoutes = require('./routes/ledgerRoutes');
+const savingGoalRoutes = require('./routes/savingGoalRoutes');
 const connectDB = require('./config/db');
 
-// Serverless DB Connection Middleware
+// Health check endpoint (Public - No DB dependency)
+app.get('/api/status', (req, res) => {
+  res.json({ success: true, message: 'Personal Finance Tracker API is running' });
+});
+
+// Serverless DB Connection Middleware for database routes
 app.use(async (req, res, next) => {
   try {
     await connectDB();
     next();
   } catch (err) {
     console.error('Database connection error in request:', err.message);
-    res.status(500).json({ success: false, error: 'Database Connection Failed. Please check MONGO_URI.' });
+    res.status(500).json({ success: false, error: err.message || 'Database Connection Failed. Please check MONGO_URI.' });
   }
 });
 
@@ -50,11 +56,6 @@ app.use('/api/friends', friendRoutes);
 app.use('/api/ledger', ledgerRoutes);
 app.use('/api/saving-goals', savingGoalRoutes);
 
-// Health check endpoint
-app.get('/api/status', (req, res) => {
-  res.json({ success: true, message: 'Personal Finance Tracker API is running' });
-});
-
 // 404 Route handler
 app.use((req, res, next) => {
   res.status(404).json({ success: false, error: 'Endpoint not found' });
@@ -62,7 +63,6 @@ app.use((req, res, next) => {
 
 // Global Error Handler
 app.use((err, req, res, next) => {
-  // Only log errors in development/production, not during tests to keep logs clean
   if (process.env.NODE_ENV !== 'test') {
     console.error(err.stack);
   }

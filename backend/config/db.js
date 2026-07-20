@@ -7,20 +7,20 @@ const connectDB = async () => {
     return;
   }
 
-  const mongoUri = process.env.MONGO_URI || 'mongodb://localhost:27017/personal_finance_tracker';
+  const mongoUri = process.env.MONGO_URI;
+  if (!mongoUri) {
+    throw new Error('MONGO_URI Environment Variable is missing. Please set MONGO_URI in Vercel settings.');
+  }
 
   try {
     const conn = await mongoose.connect(mongoUri, {
-      serverSelectionTimeoutMS: 10000,
-      bufferCommands: false, // Prevent query buffering timeouts in serverless functions
+      serverSelectionTimeoutMS: 5000,
+      bufferCommands: false,
     });
     isConnected = true;
     console.log(`MongoDB Connected: ${conn.connection.host}`);
   } catch (error) {
     console.error(`MongoDB Connection Error: ${error.message}`);
-    if (process.env.NODE_ENV !== 'production') {
-      process.exit(1);
-    }
     throw error;
   }
 };
