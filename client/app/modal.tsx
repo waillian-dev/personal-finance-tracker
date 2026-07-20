@@ -279,7 +279,7 @@ export default function AddTransactionModal() {
   const destWallet = wallets.find(w => w._id === selectedDestWalletId);
 
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }, Platform.OS === 'android' && { paddingTop: 20 }]}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }, Platform.OS === 'android' && { paddingTop: 0 }]}>
 
       {/* Header */}
       <View style={[styles.header, { borderBottomColor: colors.border }]}>

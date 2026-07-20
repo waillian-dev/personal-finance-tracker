@@ -60,7 +60,7 @@ export default function OnboardingScreen() {
   const slide = SLIDES[activeSlide];
 
   return (
-    <SafeAreaView style={[styles.container, Platform.OS === 'android' && { paddingTop: 20 }]}>
+    <SafeAreaView style={[styles.container, Platform.OS === 'android' && { paddingTop: 0 }]}>
       {/* Header Skip Button */}
       <View style={styles.header}>
         {activeSlide < SLIDES.length - 1 ? (

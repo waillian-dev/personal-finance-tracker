@@ -201,7 +201,7 @@ export default function FriendsScreen() {
   }
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }, Platform.OS === 'android' && { paddingTop: 20 }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }, Platform.OS === 'android' && { paddingTop: 10 }]}>
       {/* Centered screen title */}
       <Text style={[styles.screenTitle, { color: colors.text }]}>Friends & Ledgers</Text>
 

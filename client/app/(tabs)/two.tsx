@@ -418,7 +418,7 @@ export default function WalletsScreen() {
   }
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }, Platform.OS === 'android' && { paddingTop: 20 }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }, Platform.OS === 'android' && { paddingTop: 0 }]}>
       <ScrollView
         contentContainerStyle={styles.scrollContainer}
         refreshControl={

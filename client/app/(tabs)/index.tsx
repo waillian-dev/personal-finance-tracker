@@ -11,6 +11,7 @@ import {
   Animated,
   Image,
   Platform,
+  StatusBar,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -350,8 +351,10 @@ export default function DashboardScreen() {
     .filter((t) => t.type === 'expense')
     .reduce((sum, t) => sum + Number(t.amount), 0);
 
+  const statusBarPadding = Platform.OS === 'android' ? (StatusBar.currentHeight || 24) + 12 : 52;
+
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }, Platform.OS === 'android' && { paddingTop: 20 }]}>
+    <SafeAreaView edges={['left', 'right', 'bottom']} style={[styles.container, { backgroundColor: colors.background }]}>
       <ScrollView
         contentContainerStyle={styles.scrollContainer}
         refreshControl={
@@ -359,7 +362,7 @@ export default function DashboardScreen() {
         }
       >
         {/* Welcome Redesigned Purple Section */}
-        <View style={[styles.purpleHeaderContainer, { backgroundColor: headerBg }]}>
+        <View style={[styles.purpleHeaderContainer, { backgroundColor: headerBg, paddingTop: statusBarPadding }]}>
           <View style={styles.welcomeRow}>
             <View style={styles.avatarRow}>
               <View style={styles.avatarContainer}>
@@ -703,10 +706,11 @@ const styles = StyleSheet.create({
   },
   purpleHeaderContainer: {
     paddingHorizontal: 24,
-    paddingTop: 32,
+    // paddingTop: 32,
     paddingBottom: 48,
     borderBottomLeftRadius: 36,
     borderBottomRightRadius: 36,
+    paddingTop: 32,
   },
   welcomeRow: {
     flexDirection: 'row',
