@@ -25,7 +25,18 @@ const predictionsRoutes = require('./routes/predictionsRoutes');
 const recurringRoutes = require('./routes/recurringRoutes');
 const friendRoutes = require('./routes/friendRoutes');
 const ledgerRoutes = require('./routes/ledgerRoutes');
-const savingGoalRoutes = require('./routes/savingGoalRoutes');
+const connectDB = require('./config/db');
+
+// Serverless DB Connection Middleware
+app.use(async (req, res, next) => {
+  try {
+    await connectDB();
+    next();
+  } catch (err) {
+    console.error('Database connection error in request:', err.message);
+    res.status(500).json({ success: false, error: 'Database Connection Failed. Please check MONGO_URI.' });
+  }
+});
 
 // Mount Routers
 app.use('/api/auth', authRoutes);
