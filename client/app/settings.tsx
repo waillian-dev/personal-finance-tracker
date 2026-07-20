@@ -18,7 +18,7 @@ import { useAuthStore } from '../store/authStore';
 import { useThemeColors } from '../hooks/useThemeColors';
 import api from '../services/api';
 import { formatCurrency } from '../utils/currency';
-import { AltArrowLeft } from '@solar-icons/react-native/outline';
+import { AltArrowLeft } from '@solar-icons/react-native/Outline';
 
 const CURRENCIES = ['USD', 'MMK', 'EUR', 'SGD', 'THB', 'JPY'];
 

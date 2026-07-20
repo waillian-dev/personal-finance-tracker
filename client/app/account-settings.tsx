@@ -18,7 +18,7 @@ import { useThemeColors } from '../hooks/useThemeColors';
 import CustomAlert from '../components/CustomAlert';
 
 // Solar Icons
-import { AltArrowLeft } from '@solar-icons/react-native/outline';
+import { AltArrowLeft } from '@solar-icons/react-native/Outline';
 import {
   User,
   Letter,

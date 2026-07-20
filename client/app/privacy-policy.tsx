@@ -10,7 +10,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useThemeColors } from '../hooks/useThemeColors';
-import { AltArrowLeft } from '@solar-icons/react-native/outline';
+import { AltArrowLeft } from '@solar-icons/react-native/Outline';
 
 export default function PrivacyPolicyScreen() {
   const { colors } = useThemeColors();

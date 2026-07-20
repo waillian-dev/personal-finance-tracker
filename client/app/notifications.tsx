@@ -16,7 +16,7 @@ import { useAuthStore } from '../store/authStore';
 import { formatCurrency } from '../utils/currency';
 import { Transaction, Wallet } from '../types';
 import { useThemeColors } from '../hooks/useThemeColors';
-import { AltArrowLeft } from '@solar-icons/react-native/outline';
+import { AltArrowLeft } from '@solar-icons/react-native/Outline';
 
 interface AppNotification {
   id: string;

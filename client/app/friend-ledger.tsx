@@ -23,7 +23,7 @@ import CustomAlert from '../components/CustomAlert';
 import { useThemeColors } from '../hooks/useThemeColors';
 
 // Solar Icons
-import { AltArrowLeft } from '@solar-icons/react-native/outline';
+import { AltArrowLeft } from '@solar-icons/react-native/Outline';
 import {
   Widget,
   AddCircle,

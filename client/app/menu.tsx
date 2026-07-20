@@ -13,7 +13,7 @@ import { useRouter } from 'expo-router';
 import { useThemeColors } from '../hooks/useThemeColors';
 
 // Solar Icons
-import { AltArrowLeft } from '@solar-icons/react-native/outline';
+import { AltArrowLeft } from '@solar-icons/react-native/Outline';
 import {
   Magnifier,
   AddCircle,
