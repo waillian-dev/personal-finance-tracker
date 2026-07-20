@@ -1,6 +1,4 @@
 import axios from 'axios';
-import Constants from 'expo-constants';
-import { Platform } from 'react-native';
 import { getItem, setItem, deleteItem } from '../utils/storage';
 
 // Live Production Vercel API Base URL
@@ -46,33 +44,42 @@ api.interceptors.request.use(
   }
 );
 
-// Response Interceptor: Handle auth errors (e.g. token expired)
+// Response Interceptor: Handle auth errors & token refresh
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
     
+    // Exclude auth endpoints from triggering refresh loops on 401
+    const requestUrl = originalRequest?.url || '';
+    const isAuthEndpoint = 
+      requestUrl.includes('/auth/login') ||
+      requestUrl.includes('/auth/register') ||
+      requestUrl.includes('/auth/refresh');
+
     // Check if unauthorized and has not retried yet
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    if (error.response?.status === 401 && !originalRequest._retry && !isAuthEndpoint) {
       originalRequest._retry = true;
       try {
         const refreshToken = await getItem('refreshToken');
         if (refreshToken) {
           // Attempt to get a new access token
           const response = await axios.post(`${API_URL}/auth/refresh`, { refreshToken });
-          const { token: newToken, refreshToken: newRefreshToken } = response.data.data;
-          
-          // Save new tokens
-          await setItem('userToken', newToken);
-          await setItem('refreshToken', newRefreshToken);
-          
-          // Retry original request with new token
-          originalRequest.headers.Authorization = `Bearer ${newToken}`;
-          return api(originalRequest);
+          if (response.data?.success && response.data?.data) {
+            const { token: newToken, refreshToken: newRefreshToken } = response.data.data;
+            
+            // Save new tokens
+            await setItem('userToken', newToken);
+            await setItem('refreshToken', newRefreshToken);
+            
+            // Retry original request with new token
+            originalRequest.headers.Authorization = `Bearer ${newToken}`;
+            return api(originalRequest);
+          }
         }
       } catch (refreshError) {
-        console.error('Token refresh failed, logging out...', refreshError);
-        // Clear tokens
+        console.warn('Session expired or refresh token invalid. Clearing auth credentials.');
+        // Clear stored tokens safely
         await deleteItem('userToken');
         await deleteItem('refreshToken');
       }
