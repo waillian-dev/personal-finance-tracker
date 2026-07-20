@@ -17,13 +17,15 @@ import { formatCurrency } from '../utils/currency';
 import { Transaction, Wallet } from '../types';
 import { useThemeColors } from '../hooks/useThemeColors';
 import { AltArrowLeft } from '@solar-icons/react-native/Outline';
+import { getItem, setItem } from '../utils/storage';
 
-interface AppNotification {
+export interface AppNotification {
   id: string;
   type: 'salary' | 'expense_limit' | 'fee' | 'general';
   title: string;
   message: string;
   date: Date;
+  read?: boolean;
 }
 
 export default function NotificationsScreen() {
@@ -31,31 +33,34 @@ export default function NotificationsScreen() {
   const router = useRouter();
   const { user } = useAuthStore();
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
+  const [readIds, setReadIds] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const generateNotifications = async () => {
+    const loadNotifications = async () => {
       try {
+        const storedReadIdsStr = await getItem('readNotificationIds');
+        const initialReadIds: string[] = storedReadIdsStr ? JSON.parse(storedReadIdsStr) : [];
+        setReadIds(initialReadIds);
+
         const [walletsRes, transRes] = await Promise.all([
           api.get('/wallets'),
           api.get('/transactions?limit=20'),
         ]);
 
-        const wallets: Wallet[] = walletsRes.data.success ? walletsRes.data.data : [];
         const transactions: Transaction[] = transRes.data.success ? transRes.data.data : [];
-
         const list: AppNotification[] = [];
 
         // 1. General welcome notice
         list.push({
           id: 'welcome',
           type: 'general',
-          title: 'Welcome to Antigravity Finance',
+          title: 'Welcome to Zenith Finance',
           message: 'Your personal budget and wallet tracker is active. Get started by adding your wallets and expenses.',
           date: user?.createdAt ? new Date(user.createdAt) : new Date(),
         });
 
-        // 2. Salary Credit Notice (Triggered if enabled in Settings & has income transactions)
+        // 2. Salary Credit Notice
         if (user?.notificationSalary !== false && user?.monthlySalary) {
           const salaryTrans = transactions.find(t => t.type === 'income' && t.amount >= user.monthlySalary * 0.5);
           if (salaryTrans) {
@@ -63,13 +68,13 @@ export default function NotificationsScreen() {
               id: `salary-${salaryTrans._id}`,
               type: 'salary',
               title: 'Salary Credited',
-              message: `Your monthly salary baseline of ${formatCurrency(user.monthlySalary, user.currency)} was detected and recorded to ${salaryTrans.walletId?.name || 'wallet'}.`,
+              message: `Your monthly salary baseline of ${formatCurrency(user.monthlySalary, user.currency)} was detected and recorded.`,
               date: new Date(salaryTrans.date),
             });
           }
         }
 
-        // 3. High Expense Warning (Triggered if enabled & monthly expenses exceed 80% of salary)
+        // 3. High Expense Warning
         if (user?.notificationExpenseLimit !== false && user?.monthlySalary) {
           const totalExpenses = transactions
             .filter(t => t.type === 'expense')
@@ -80,13 +85,13 @@ export default function NotificationsScreen() {
               id: 'expense-limit-warning',
               type: 'expense_limit',
               title: 'Expense Warning',
-              message: `Your total monthly expenses (${formatCurrency(totalExpenses, user.currency)}) have exceeded 80% of your monthly salary baseline (${formatCurrency(user.monthlySalary, user.currency)}). Consider keeping an eye on your budget.`,
+              message: `Your total monthly expenses (${formatCurrency(totalExpenses, user.currency)}) have exceeded 80% of your salary baseline (${formatCurrency(user.monthlySalary, user.currency)}).`,
               date: new Date(),
             });
           }
         }
 
-        // 4. Monthly/Annual Card Fee Alert (Triggered if enabled & has transactions containing "fee")
+        // 4. Monthly Card Fee Warning
         if (user?.notificationMonthlyFee !== false) {
           const feeTrans = transactions.find(t => 
             t.type === 'expense' && 
@@ -96,8 +101,8 @@ export default function NotificationsScreen() {
             list.push({
               id: `fee-${feeTrans._id}`,
               type: 'fee',
-              title: 'Card Fee Warning',
-              message: `An expense of ${formatCurrency(feeTrans.amount, user?.currency)} labeled "${feeTrans.description}" was recorded as a monthly/annual card fee charge.`,
+              title: 'Card Fee Alert',
+              message: `An expense of ${formatCurrency(feeTrans.amount, user?.currency)} labeled "${feeTrans.description}" was recorded as a card fee charge.`,
               date: new Date(feeTrans.date),
             });
           }
@@ -113,62 +118,98 @@ export default function NotificationsScreen() {
       }
     };
 
-    generateNotifications();
+    loadNotifications();
   }, [user]);
+
+  const markAsRead = async (id: string) => {
+    if (readIds.includes(id)) return;
+    const updated = [...readIds, id];
+    setReadIds(updated);
+    await setItem('readNotificationIds', JSON.stringify(updated));
+  };
+
+  const markAllAsRead = async () => {
+    const allIds = notifications.map(n => n.id);
+    setReadIds(allIds);
+    await setItem('readNotificationIds', JSON.stringify(allIds));
+  };
 
   const getNotificationIconInfo = (type: string) => {
     switch (type) {
       case 'salary':
-        return { icon: 'money', color: '#059669', bg: 'rgba(5, 150, 105, 0.08)' };
+        return { icon: 'money', color: '#059669', bg: 'rgba(5, 150, 105, 0.1)' };
       case 'expense_limit':
-        return { icon: 'warning', color: '#DC2626', bg: 'rgba(220, 38, 38, 0.08)' };
+        return { icon: 'warning', color: '#DC2626', bg: 'rgba(220, 38, 38, 0.1)' };
       case 'fee':
-        return { icon: 'info-circle', color: '#2563EB', bg: 'rgba(37, 99, 235, 0.08)' };
+        return { icon: 'credit-card', color: '#2563EB', bg: 'rgba(37, 99, 235, 0.1)' };
       default:
-        return { icon: 'bell', color: '#7C3AED', bg: 'rgba(124, 58, 237, 0.08)' };
+        return { icon: 'bell', color: '#7C3AED', bg: 'rgba(124, 58, 237, 0.1)' };
     }
   };
 
+  const unreadCount = notifications.filter(n => !readIds.includes(n.id)).length;
+
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }, Platform.OS === 'android' && { paddingTop: 0 }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }, Platform.OS === 'android' && { paddingTop: 20 }]}>
       {/* Custom Header Section */}
       <View style={[styles.header, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
         <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
           <AltArrowLeft size={22} color={colors.text} />
         </TouchableOpacity>
         <Text style={[styles.headerTitle, { color: colors.text }]}>Notifications</Text>
-        <View style={{ width: 40 }} />
+        {unreadCount > 0 ? (
+          <TouchableOpacity onPress={markAllAsRead} style={styles.markAllBtn}>
+            <Text style={styles.markAllText}>Mark all read</Text>
+          </TouchableOpacity>
+        ) : (
+          <View style={{ width: 40 }} />
+        )}
       </View>
 
       {isLoading ? (
         <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
-          <ActivityIndicator size="large" color="#059669" />
+          <ActivityIndicator size="large" color="#10B981" />
         </View>
       ) : notifications.length === 0 ? (
         <View style={[styles.emptyContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <FontAwesome name="bell-slash-o" size={48} color={colors.textSecondary} />
           <Text style={[styles.emptyText, { color: colors.text }]}>No notifications at the moment.</Text>
-          <Text style={[styles.emptySubtext, { color: colors.textSecondary }]}>Enabled settings can be preconfigured in settings.</Text>
+          <Text style={[styles.emptySubtext, { color: colors.textSecondary }]}>System alerts will appear here when triggered.</Text>
         </View>
       ) : (
-        <ScrollView contentContainerStyle={styles.scrollContainer}>
+        <ScrollView contentContainerStyle={styles.scrollContainer} showsVerticalScrollIndicator={false}>
           {notifications.map((n) => {
+            const isRead = readIds.includes(n.id);
             const iconInfo = getNotificationIconInfo(n.type);
             return (
-              <View key={n.id} style={[styles.notificationCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+              <TouchableOpacity
+                key={n.id}
+                activeOpacity={0.85}
+                onPress={() => markAsRead(n.id)}
+                style={[
+                  styles.notificationCard,
+                  { backgroundColor: colors.card, borderColor: isRead ? colors.border : '#10B981' },
+                  !isRead && styles.unreadCardGlow,
+                ]}
+              >
                 <View style={[styles.iconWrapper, { backgroundColor: iconInfo.bg }]}>
                   <FontAwesome name={iconInfo.icon as any} size={18} color={iconInfo.color} />
                 </View>
                 <View style={styles.contentWrapper}>
                   <View style={styles.cardHeader}>
-                    <Text style={[styles.cardTitle, { color: colors.text }]}>{n.title}</Text>
+                    <View style={styles.titleRow}>
+                      <Text style={[styles.cardTitle, { color: colors.text, fontWeight: isRead ? '600' : '800' }]}>
+                        {n.title}
+                      </Text>
+                      {!isRead && <View style={styles.unreadDot} />}
+                    </View>
                     <Text style={[styles.cardDate, { color: colors.textSecondary }]}>
                       {n.date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
                     </Text>
                   </View>
                   <Text style={[styles.cardMessage, { color: colors.textSecondary }]}>{n.message}</Text>
                 </View>
-              </View>
+              </TouchableOpacity>
             );
           })}
         </ScrollView>
@@ -180,7 +221,6 @@ export default function NotificationsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
   },
   header: {
     flexDirection: 'row',
@@ -189,19 +229,24 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 16,
     paddingBottom: 16,
-    backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
   },
   backButton: {
     padding: 8,
-    borderRadius: 8,
-    backgroundColor: '#F1F5F9',
+    borderRadius: 10,
   },
   headerTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
-    color: '#0F172A',
+    fontWeight: '700',
+  },
+  markAllBtn: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  markAllText: {
+    color: '#10B981',
+    fontSize: 13,
+    fontWeight: '700',
   },
   loadingContainer: {
     flex: 1,
@@ -214,25 +259,26 @@ const styles = StyleSheet.create({
   },
   notificationCard: {
     flexDirection: 'row',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
+    borderRadius: 20,
     padding: 16,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.02,
-    shadowRadius: 8,
-    elevation: 1,
+    shadowOpacity: 0.03,
+    shadowRadius: 10,
+    elevation: 2,
+  },
+  unreadCardGlow: {
+    borderWidth: 1.5,
   },
   iconWrapper: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
+    width: 44,
+    height: 44,
+    borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 16,
+    marginRight: 14,
   },
   contentWrapper: {
     flex: 1,
@@ -243,18 +289,26 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 6,
   },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
   cardTitle: {
     fontSize: 15,
-    fontWeight: 'bold',
-    color: '#0F172A',
+  },
+  unreadDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#10B981',
   },
   cardDate: {
     fontSize: 11,
-    color: '#94A3B8',
+    fontWeight: '500',
   },
   cardMessage: {
     fontSize: 13,
-    color: '#475569',
     lineHeight: 18,
   },
   emptyContainer: {
@@ -265,14 +319,12 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 16,
-    fontWeight: 'bold',
-    color: '#0F172A',
+    fontWeight: '700',
     marginTop: 16,
     marginBottom: 8,
   },
   emptySubtext: {
     fontSize: 13,
-    color: '#64748B',
     textAlign: 'center',
   },
 });

@@ -14,12 +14,13 @@ import {
   StatusBar,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import api from '../../services/api';
 import { Wallet, Transaction } from '../../types';
 import { useAuthStore } from '../../store/authStore';
 import { formatCurrency } from '../../utils/currency';
 import { useThemeColors } from '../../hooks/useThemeColors';
+import { getItem } from '../../utils/storage';
 import * as SolarBold from '@solar-icons/react-native/Bold';
 import Svg, { Path, Rect, Circle, Line, Text as SvgText, Polygon } from 'react-native-svg';
 
@@ -177,9 +178,28 @@ export default function DashboardScreen() {
     return { income, expense };
   };
 
+  const [hasUnread, setHasUnread] = useState(false);
+
   useEffect(() => {
     fetchData();
   }, []);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      const checkUnread = async () => {
+        try {
+          const storedReadIdsStr = await getItem('readNotificationIds');
+          const readIds: string[] = storedReadIdsStr ? JSON.parse(storedReadIdsStr) : [];
+          const defaultIds = ['welcome', 'expense-limit-warning'];
+          const hasUnreadItems = defaultIds.some(id => !readIds.includes(id));
+          setHasUnread(hasUnreadItems);
+        } catch (err) {
+          setHasUnread(false);
+        }
+      };
+      checkUnread();
+    }, [])
+  );
 
   const onRefresh = () => {
     setRefreshing(true);
@@ -394,7 +414,7 @@ export default function DashboardScreen() {
                 onPress={() => router.push('/notifications')}
               >
                 <Bell size={20} color={headerText} />
-                <View style={styles.bellBadge} />
+                {hasUnread && <View style={styles.bellBadge} />}
               </TouchableOpacity>
             </View>
           </View>
@@ -567,7 +587,7 @@ export default function DashboardScreen() {
         <View style={[styles.chartCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <Text style={[styles.chartTitle, { color: colors.text }]}>Monthly Spending Trend</Text>
           <View style={styles.chartWrapper}>
-            <Svg width="100%" height={160} viewBox="0 0 340 160">
+            <Svg width="100%" height={175} viewBox="0 0 340 175">
               {/* Dotted Grid lines */}
               <Line x1="45" y1="15" x2="330" y2="15" stroke={isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)'} strokeWidth="1" strokeDasharray="3 3" />
               <Line x1="45" y1="45" x2="330" y2="45" stroke={isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)'} strokeWidth="1" strokeDasharray="3 3" />
@@ -581,6 +601,13 @@ export default function DashboardScreen() {
               <SvgText x="35" y="79" fontSize="9" fontWeight="600" fill={colors.textSecondary} textAnchor="end">500$</SvgText>
               <SvgText x="35" y="109" fontSize="9" fontWeight="600" fill={colors.textSecondary} textAnchor="end">100$</SvgText>
               <SvgText x="35" y="139" fontSize="9" fontWeight="600" fill={colors.textSecondary} textAnchor="end">0</SvgText>
+
+              {/* X Axis Date Labels */}
+              <SvgText x="45" y="155" fontSize="8" fontWeight="600" fill={colors.textSecondary} textAnchor="start">{trendData[0]?.dateLabel}</SvgText>
+              <SvgText x="116" y="155" fontSize="8" fontWeight="600" fill={colors.textSecondary} textAnchor="middle">{trendData[7]?.dateLabel}</SvgText>
+              <SvgText x="187" y="155" fontSize="8" fontWeight="600" fill={colors.textSecondary} textAnchor="middle">{trendData[15]?.dateLabel}</SvgText>
+              <SvgText x="258" y="155" fontSize="8" fontWeight="600" fill={colors.textSecondary} textAnchor="middle">{trendData[22]?.dateLabel}</SvgText>
+              <SvgText x="330" y="155" fontSize="8" fontWeight="600" fill={colors.textSecondary} textAnchor="end">{trendData[29]?.dateLabel}</SvgText>
 
               {/* Plot Path */}
               <Path

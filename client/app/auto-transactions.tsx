@@ -332,16 +332,68 @@ export default function AutoTransactionsScreen() {
             <AltArrowDown size={18} color={colors.textSecondary} />
           </TouchableOpacity>
 
-          {/* Start Date input */}
+          {/* Start Date input & Quick Date Selection Chips */}
           <View style={[styles.inputGroup, { marginTop: 14 }]}>
             <Text style={[styles.label, { color: colors.textSecondary }]}>Starting Date (YYYY-MM-DD)</Text>
-            <TextInput
-              style={[styles.input, { backgroundColor: colors.inputBg, borderColor: colors.border, color: colors.text }]}
-              value={startDate}
-              onChangeText={setStartDate}
-              placeholder="e.g. 2026-07-20"
-              placeholderTextColor="#94A3B8"
-            />
+            
+            {/* Quick Date Chips */}
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 10 }}>
+              <TouchableOpacity
+                style={[styles.dateChip, { backgroundColor: colors.inputBg, borderColor: colors.border }]}
+                onPress={() => {
+                  const today = new Date().toISOString().split('T')[0];
+                  setStartDate(today);
+                }}
+              >
+                <Text style={[styles.dateChipText, { color: colors.text }]}>Today</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.dateChip, { backgroundColor: colors.inputBg, borderColor: colors.border }]}
+                onPress={() => {
+                  const tomorrow = new Date();
+                  tomorrow.setDate(tomorrow.getDate() + 1);
+                  setStartDate(tomorrow.toISOString().split('T')[0]);
+                }}
+              >
+                <Text style={[styles.dateChipText, { color: colors.text }]}>Tomorrow</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.dateChip, { backgroundColor: colors.inputBg, borderColor: colors.border }]}
+                onPress={() => {
+                  const nextMonth = new Date();
+                  nextMonth.setMonth(nextMonth.getMonth() + 1);
+                  nextMonth.setDate(1);
+                  setStartDate(nextMonth.toISOString().split('T')[0]);
+                }}
+              >
+                <Text style={[styles.dateChipText, { color: colors.text }]}>1st of Next Month</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.dateChip, { backgroundColor: colors.inputBg, borderColor: colors.border }]}
+                onPress={() => {
+                  const nextMonth = new Date();
+                  nextMonth.setMonth(nextMonth.getMonth() + 1);
+                  nextMonth.setDate(15);
+                  setStartDate(nextMonth.toISOString().split('T')[0]);
+                }}
+              >
+                <Text style={[styles.dateChipText, { color: colors.text }]}>15th of Next Month</Text>
+              </TouchableOpacity>
+            </ScrollView>
+
+            <View style={[styles.dateInputWrapper, { backgroundColor: colors.inputBg, borderColor: colors.border }]}>
+              <TextInput
+                style={[styles.input, { flex: 1, backgroundColor: 'transparent', borderWidth: 0, color: colors.text }]}
+                value={startDate}
+                onChangeText={setStartDate}
+                placeholder="YYYY-MM-DD"
+                placeholderTextColor="#94A3B8"
+              />
+              <FontAwesome name="calendar" size={16} color="#10B981" style={{ marginRight: 12 }} />
+            </View>
           </View>
 
           {/* Submit Button */}
@@ -673,6 +725,24 @@ const styles = StyleSheet.create({
   frequencyBadgeText: {
     fontSize: 12,
     fontWeight: '700',
+  },
+  dateChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+    borderWidth: 1,
+    marginRight: 8,
+  },
+  dateChipText: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  dateInputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: 14,
+    borderWidth: 1,
+    height: 48,
   },
   scheduleLeft: {
     flexDirection: 'row',

@@ -106,7 +106,7 @@ export default function ProfileScreen() {
   };
 
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }, Platform.OS === 'android' && { paddingTop: 10 }]}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }, Platform.OS === 'android' && { paddingTop: 10 }, Platform.OS === 'android' && { paddingBottom: 50 }]}>
       {/* Centered screen title */}
       <Text style={[styles.screenTitle, { color: colors.text }]}>Profile & Settings</Text>
 

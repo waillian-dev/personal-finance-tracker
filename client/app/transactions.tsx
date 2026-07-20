@@ -49,6 +49,11 @@ export default function TransactionsScreen() {
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>('all');
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
 
+  // Date Filter states
+  const [dateFilter, setDateFilter] = useState<'all' | 'today' | 'week' | 'month' | 'custom'>('all');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+
   const fetchFiltersAndData = async (showLoading = true) => {
     if (showLoading) setIsLoading(true);
     try {
@@ -95,15 +100,41 @@ export default function TransactionsScreen() {
     fetchFiltersAndData(false);
   };
 
-  // Local client side filtering for search query text matching
+  // Local client side filtering for search query text matching & date filters
   const filteredTransactions = transactions.filter((t) => {
-    if (!searchQuery.trim()) return true;
-    const q = searchQuery.toLowerCase();
-    return (
-      t.description?.toLowerCase().includes(q) ||
-      t.categoryId?.name?.toLowerCase().includes(q) ||
-      t.merchant?.toLowerCase().includes(q)
-    );
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      const matches =
+        t.description?.toLowerCase().includes(q) ||
+        t.categoryId?.name?.toLowerCase().includes(q) ||
+        t.merchant?.toLowerCase().includes(q);
+      if (!matches) return false;
+    }
+
+    const tDate = new Date(t.date);
+    const now = new Date();
+
+    if (dateFilter === 'today') {
+      if (tDate.toDateString() !== now.toDateString()) return false;
+    } else if (dateFilter === 'week') {
+      const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      if (tDate < oneWeekAgo || tDate > now) return false;
+    } else if (dateFilter === 'month') {
+      if (tDate.getMonth() !== now.getMonth() || tDate.getFullYear() !== now.getFullYear()) return false;
+    } else if (dateFilter === 'custom') {
+      if (startDate) {
+        const s = new Date(startDate);
+        s.setHours(0, 0, 0, 0);
+        if (tDate < s) return false;
+      }
+      if (endDate) {
+        const e = new Date(endDate);
+        e.setHours(23, 59, 59, 999);
+        if (tDate > e) return false;
+      }
+    }
+
+    return true;
   });
 
   const getCategoryIcon = (category: any) => {
@@ -230,6 +261,58 @@ export default function TransactionsScreen() {
               </TouchableOpacity>
             ))}
           </ScrollView>
+        </View>
+
+        {/* DATE FILTER CHIPS Row */}
+        <View style={{ marginTop: 10 }}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, gap: 8 }}>
+            {[
+              { key: 'all', label: 'All Time' },
+              { key: 'today', label: 'Today' },
+              { key: 'week', label: 'This Week' },
+              { key: 'month', label: 'This Month' },
+              { key: 'custom', label: 'Custom Range' },
+            ].map((chip) => (
+              <TouchableOpacity
+                key={chip.key}
+                style={[
+                  styles.dateFilterChip,
+                  { backgroundColor: colors.card, borderColor: colors.border },
+                  dateFilter === chip.key && { borderColor: '#10B981', backgroundColor: isDark ? 'rgba(16, 185, 129, 0.15)' : 'rgba(16, 185, 129, 0.08)' }
+                ]}
+                onPress={() => setDateFilter(chip.key as any)}
+              >
+                <Text style={[styles.dateFilterChipText, { color: colors.text }, dateFilter === chip.key && { color: '#10B981', fontWeight: '700' }]}>
+                  {chip.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+
+          {/* Custom Date Range Inputs */}
+          {dateFilter === 'custom' && (
+            <View style={styles.customDateRow}>
+              <View style={[styles.customDateInputBox, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                <TextInput
+                  style={[styles.customDateInput, { color: colors.text }]}
+                  placeholder="Start: YYYY-MM-DD"
+                  placeholderTextColor="#94A3B8"
+                  value={startDate}
+                  onChangeText={setStartDate}
+                />
+              </View>
+              <Text style={{ color: colors.textSecondary, fontWeight: '700' }}>to</Text>
+              <View style={[styles.customDateInputBox, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                <TextInput
+                  style={[styles.customDateInput, { color: colors.text }]}
+                  placeholder="End: YYYY-MM-DD"
+                  placeholderTextColor="#94A3B8"
+                  value={endDate}
+                  onChangeText={setEndDate}
+                />
+              </View>
+            </View>
+          )}
         </View>
 
         {/* Collapsible Wallet & Category Filters */}
@@ -426,6 +509,34 @@ const styles = StyleSheet.create({
   typeTabText: {
     fontSize: 13,
     fontWeight: '600',
+  },
+  dateFilterChip: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 14,
+    borderWidth: 1,
+  },
+  dateFilterChipText: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  customDateRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    marginTop: 10,
+    gap: 10,
+  },
+  customDateInputBox: {
+    flex: 1,
+    height: 42,
+    borderRadius: 12,
+    borderWidth: 1,
+    paddingHorizontal: 12,
+    justifyContent: 'center',
+  },
+  customDateInput: {
+    fontSize: 12,
   },
   advancedFiltersContainer: {
     marginTop: 12,
