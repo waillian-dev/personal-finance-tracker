@@ -3,28 +3,18 @@ import Constants from 'expo-constants';
 import { Platform } from 'react-native';
 import { getItem, setItem, deleteItem } from '../utils/storage';
 
-// Get target URL depending on platform and simulator status
+// Live Production Vercel API Base URL
+const VERCEL_API_URL = 'https://personal-finance-tracker-silk-rho.vercel.app/api';
+
+// Get target URL depending on environment or fallback to live Vercel API
 const getBaseUrl = () => {
-  if (Platform.OS === 'web') {
-    return 'http://localhost:5001/api';
+  if (process.env.EXPO_PUBLIC_API_URL) {
+    const customUrl = process.env.EXPO_PUBLIC_API_URL;
+    return customUrl.endsWith('/api') ? customUrl : `${customUrl}/api`;
   }
   
-  // Constants.isDevice is deprecated in Constants but still present as a fallback
-  const isDevice = Constants.isDevice;
-  if (!isDevice) {
-    if (Platform.OS === 'ios') {
-      return 'http://127.0.0.1:5001/api';
-    } else if (Platform.OS === 'android') {
-      return 'http://10.0.2.2:5001/api';
-    }
-  }
-
-  const hostUri = Constants.expoConfig?.hostUri;
-  if (hostUri) {
-    const ip = hostUri.split(':')[0];
-    return `http://${ip}:5001/api`;
-  }
-  return 'http://127.0.0.1:5001/api';
+  // Default to live Vercel production API URL
+  return VERCEL_API_URL;
 };
 
 const API_URL = getBaseUrl();
@@ -35,7 +25,7 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
-  timeout: 10000,
+  timeout: 15000,
 });
 
 // Request Interceptor: Inject JWT token from storage
