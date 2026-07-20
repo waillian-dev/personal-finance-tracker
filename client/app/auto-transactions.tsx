@@ -21,6 +21,7 @@ import { useAuthStore } from '../store/authStore';
 import { formatCurrency } from '../utils/currency';
 import { useThemeColors } from '../hooks/useThemeColors';
 import CustomAlert from '../components/CustomAlert';
+import CalendarDatePickerModal from '../components/CalendarDatePickerModal';
 
 // Solar Icons
 import { AltArrowLeft } from '@solar-icons/react-native/Outline';
@@ -70,6 +71,7 @@ export default function AutoTransactionsScreen() {
   const [showFreqDropdown, setShowFreqDropdown] = useState(false);
 
   // Alert
+  const [showDatePicker, setShowDatePicker] = useState(false);
   const [alertState, setAlertState] = useState({
     visible: false,
     type: 'alert' as 'alert' | 'confirm',
@@ -384,16 +386,23 @@ export default function AutoTransactionsScreen() {
               </TouchableOpacity>
             </ScrollView>
 
-            <View style={[styles.dateInputWrapper, { backgroundColor: colors.inputBg, borderColor: colors.border }]}>
-              <TextInput
-                style={[styles.input, { flex: 1, backgroundColor: 'transparent', borderWidth: 0, color: colors.text }]}
-                value={startDate}
-                onChangeText={setStartDate}
-                placeholder="YYYY-MM-DD"
-                placeholderTextColor="#94A3B8"
-              />
-              <FontAwesome name="calendar" size={16} color="#10B981" style={{ marginRight: 12 }} />
-            </View>
+            <TouchableOpacity
+              style={[styles.dateInputWrapper, { backgroundColor: colors.inputBg, borderColor: colors.border, paddingHorizontal: 14 }]}
+              onPress={() => setShowDatePicker(true)}
+            >
+              <Text style={{ flex: 1, fontSize: 15, color: startDate ? colors.text : '#94A3B8' }}>
+                {startDate || 'Tap to select starting date'}
+              </Text>
+              <FontAwesome name="calendar" size={18} color="#10B981" />
+            </TouchableOpacity>
+
+            <CalendarDatePickerModal
+              visible={showDatePicker}
+              initialDate={startDate}
+              onClose={() => setShowDatePicker(false)}
+              onSelectDate={(dateStr) => setStartDate(dateStr)}
+              title="Select Starting Date"
+            />
           </View>
 
           {/* Submit Button */}

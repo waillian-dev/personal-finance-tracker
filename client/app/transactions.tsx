@@ -18,6 +18,7 @@ import { useAuthStore } from '../store/authStore';
 import { formatCurrency } from '../utils/currency';
 import { Transaction, Wallet, Category } from '../types';
 import { useThemeColors } from '../hooks/useThemeColors';
+import CalendarDatePickerModal from '../components/CalendarDatePickerModal';
 
 // Solar Icons
 import { AltArrowLeft } from '@solar-icons/react-native/Outline';
@@ -53,6 +54,8 @@ export default function TransactionsScreen() {
   const [dateFilter, setDateFilter] = useState<'all' | 'today' | 'week' | 'month' | 'custom'>('all');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+  const [showStartDatePicker, setShowStartDatePicker] = useState(false);
+  const [showEndDatePicker, setShowEndDatePicker] = useState(false);
 
   const fetchFiltersAndData = async (showLoading = true) => {
     if (showLoading) setIsLoading(true);
@@ -289,28 +292,48 @@ export default function TransactionsScreen() {
             ))}
           </ScrollView>
 
-          {/* Custom Date Range Inputs */}
+          {/* Custom Date Range Pickers */}
           {dateFilter === 'custom' && (
             <View style={styles.customDateRow}>
-              <View style={[styles.customDateInputBox, { backgroundColor: colors.card, borderColor: colors.border }]}>
-                <TextInput
-                  style={[styles.customDateInput, { color: colors.text }]}
-                  placeholder="Start: YYYY-MM-DD"
-                  placeholderTextColor="#94A3B8"
-                  value={startDate}
-                  onChangeText={setStartDate}
-                />
-              </View>
+              <TouchableOpacity
+                style={[styles.customDateInputBox, { backgroundColor: colors.card, borderColor: colors.border, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }]}
+                onPress={() => setShowStartDatePicker(true)}
+              >
+                <Text style={{ fontSize: 12, color: startDate ? colors.text : '#94A3B8' }}>
+                  {startDate || 'Start Date'}
+                </Text>
+                <FontAwesome name="calendar" size={13} color="#10B981" />
+              </TouchableOpacity>
+
               <Text style={{ color: colors.textSecondary, fontWeight: '700' }}>to</Text>
-              <View style={[styles.customDateInputBox, { backgroundColor: colors.card, borderColor: colors.border }]}>
-                <TextInput
-                  style={[styles.customDateInput, { color: colors.text }]}
-                  placeholder="End: YYYY-MM-DD"
-                  placeholderTextColor="#94A3B8"
-                  value={endDate}
-                  onChangeText={setEndDate}
-                />
-              </View>
+
+              <TouchableOpacity
+                style={[styles.customDateInputBox, { backgroundColor: colors.card, borderColor: colors.border, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }]}
+                onPress={() => setShowEndDatePicker(true)}
+              >
+                <Text style={{ fontSize: 12, color: endDate ? colors.text : '#94A3B8' }}>
+                  {endDate || 'End Date'}
+                </Text>
+                <FontAwesome name="calendar" size={13} color="#10B981" />
+              </TouchableOpacity>
+
+              {/* Start Date Picker Modal */}
+              <CalendarDatePickerModal
+                visible={showStartDatePicker}
+                initialDate={startDate}
+                onClose={() => setShowStartDatePicker(false)}
+                onSelectDate={(dateStr) => setStartDate(dateStr)}
+                title="Select Filter Start Date"
+              />
+
+              {/* End Date Picker Modal */}
+              <CalendarDatePickerModal
+                visible={showEndDatePicker}
+                initialDate={endDate}
+                onClose={() => setShowEndDatePicker(false)}
+                onSelectDate={(dateStr) => setEndDate(dateStr)}
+                title="Select Filter End Date"
+              />
             </View>
           )}
         </View>
