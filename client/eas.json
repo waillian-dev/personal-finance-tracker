@@ -10,6 +10,9 @@
     },
     "preview": {
       "distribution": "internal",
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://personal-finance-tracker-silk-rho.vercel.app/api"
+      },
       "android": {
         "buildType": "apk"
       }
