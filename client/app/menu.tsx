@@ -194,8 +194,8 @@ export default function MenuScreen() {
 
         {/* Version Footer */}
         <View style={{ alignItems: 'center', marginTop: 24, marginBottom: 16 }}>
-          <Text style={{ fontSize: 12, color: colors.textSecondary, fontWeight: '600' }}>Zenith Finance v1.0.0</Text>
-          <Text style={{ fontSize: 10, color: colors.textSecondary, marginTop: 2 }}>Build 1.0.0-release</Text>
+          <Text style={{ fontSize: 12, color: colors.textSecondary, fontWeight: '600' }}>Zenith Finance v1.1.0</Text>
+          <Text style={{ fontSize: 10, color: colors.textSecondary, marginTop: 2 }}>Build 1.1.0-release</Text>
         </View>
       </ScrollView>
     </SafeAreaView>

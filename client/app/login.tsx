@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   StyleSheet,
   Text,
@@ -9,9 +9,9 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  Image,
+  Modal,
+  Alert,
 } from 'react-native';
-import { Modal, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useAuthStore } from '../store/authStore';
@@ -19,24 +19,24 @@ import { useThemeColors } from '../hooks/useThemeColors';
 import { FontAwesome } from '@expo/vector-icons';
 import * as LocalAuthentication from 'expo-local-authentication';
 import { getItem, setItem } from '../utils/storage';
-import { Letter, LockPassword, Eye, EyeClosed, AltArrowRight } from '@solar-icons/react-native/Bold';
 
 export default function LoginScreen() {
   const { colors, isDark } = useThemeColors();
+  const router = useRouter();
+  const { login, isLoading, error, clearError } = useAuthStore();
+
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [validationError, setValidationError] = useState('');
-  
-  const { login, isLoading, error, clearError } = useAuthStore();
-  const router = useRouter();
-
   const [keepSignedIn, setKeepSignedIn] = useState(true);
+  const [validationError, setValidationError] = useState('');
+
+  // Passcode Modal States (Numpad Up/Drop)
   const [showPasscodeModal, setShowPasscodeModal] = useState(false);
   const [passcode, setPasscode] = useState('');
   const [isBiometricAvailable, setIsBiometricAvailable] = useState(true);
 
-  React.useEffect(() => {
+  useEffect(() => {
     checkBiometrics();
   }, []);
 
@@ -53,7 +53,7 @@ export default function LoginScreen() {
   const handleBiometricLogin = async () => {
     try {
       const result = await LocalAuthentication.authenticateAsync({
-        promptMessage: 'Authenticate with Fingerprint / Face ID',
+        promptMessage: 'Authenticate to sign in to Zenith Finance',
         fallbackLabel: 'Use Passcode',
         cancelLabel: 'Cancel',
       });
@@ -67,7 +67,7 @@ export default function LoginScreen() {
         } else {
           Alert.alert(
             'Biometric Sign-In',
-            'Biometric verification passed! Please log in once with email & password to save credentials for instant biometric sign-in.'
+            'Biometric verified! Log in once with email & password to save credentials for 1-tap biometric login.'
           );
         }
       }
@@ -91,7 +91,7 @@ export default function LoginScreen() {
         } else {
           setShowPasscodeModal(false);
           setPasscode('');
-          Alert.alert('Passcode Login', 'Passcode verified! Please log in once with email & password to save credentials for passcode sign-in.');
+          Alert.alert('Passcode Sign-In', 'Passcode verified! Log in once with email & password to save credentials for passcode login.');
         }
       }
     }
@@ -104,42 +104,39 @@ export default function LoginScreen() {
     }
     setValidationError('');
     clearError();
-    
+
     try {
       await login(email.trim(), password, keepSignedIn);
       await setItem('savedEmail', email.trim());
       await setItem('savedPassword', password);
     } catch (err) {
-      // Error handled by authStore
+      // Error handled in store
     }
   };
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }, Platform.OS === 'android' && { paddingTop: 0 }]}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={{ flex: 1 }}
-      >
-        <ScrollView 
-          contentContainerStyle={styles.scrollContainer} 
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-        >
-          {/* LOGO & BRANDING HEADER */}
-          <View style={styles.headerContainer}>
-            <View style={[styles.logoWrapper, { borderColor: isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.08)' }]}>
-              <Image source={require('../assets/images/logo.jpg')} style={styles.logoImage} />
+    <SafeAreaView style={[styles.container, { backgroundColor: isDark ? '#0F172A' : '#EFF6FF' }, Platform.OS === 'android' && { paddingTop: 0 }]}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
+        <ScrollView contentContainerStyle={styles.scrollContainer} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+          
+          {/* MAIN CARD CONTAINER */}
+          <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            
+            {/* LOGO ICON & HEADER */}
+            <View style={styles.headerContainer}>
+              <View style={styles.logoBadge}>
+                {/* Modern C-pin Badge */}
+                <View style={styles.logoOuterRing}>
+                  <FontAwesome name="map-marker" size={36} color="#1E40AF" />
+                  <View style={styles.logoDot} />
+                </View>
+              </View>
+
+              <Text style={[styles.title, { color: colors.text }]}>Welcome Back!</Text>
+              <Text style={[styles.subtitle, { color: colors.textSecondary }]}>Sign in to continue to your account</Text>
             </View>
-            <Text style={[styles.appName, { color: colors.text }]}>Zenith Finance</Text>
-            <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-              Log in to manage your wallets, goals & split ledgers
-            </Text>
-          </View>
 
-          {/* FORM CONTAINER */}
-          <View style={[styles.formContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
-            <Text style={[styles.formTitle, { color: colors.text }]}>Welcome Back</Text>
-
+            {/* ALERTS */}
             {error ? (
               <View style={styles.errorBox}>
                 <FontAwesome name="exclamation-circle" size={16} color="#DC2626" />
@@ -154,14 +151,14 @@ export default function LoginScreen() {
               </View>
             ) : null}
 
-            {/* Email Field */}
+            {/* EMAIL INPUT */}
             <View style={styles.inputGroup}>
-              <Text style={[styles.label, { color: colors.textSecondary }]}>Email Address</Text>
-              <View style={[styles.inputWrapper, { backgroundColor: colors.inputBg, borderColor: colors.border }]}>
-                <Letter size={20} color={colors.textSecondary} style={styles.inputIcon} />
+              <Text style={[styles.label, { color: colors.text }]}>Email</Text>
+              <View style={[styles.inputWrapper, { backgroundColor: isDark ? '#1E293B' : '#FAFAFA', borderColor: colors.border }]}>
+                <FontAwesome name="envelope-o" size={18} color="#94A3B8" style={styles.inputIcon} />
                 <TextInput
                   style={[styles.input, { color: colors.text }]}
-                  placeholder="Enter email (e.g. user@example.com)"
+                  placeholder="Enter your email"
                   placeholderTextColor="#94A3B8"
                   value={email}
                   onChangeText={(text) => {
@@ -174,14 +171,20 @@ export default function LoginScreen() {
               </View>
             </View>
 
-            {/* Password Field */}
+            {/* PASSWORD INPUT & FORGOT LINK */}
             <View style={styles.inputGroup}>
-              <Text style={[styles.label, { color: colors.textSecondary }]}>Password</Text>
-              <View style={[styles.inputWrapper, { backgroundColor: colors.inputBg, borderColor: colors.border }]}>
-                <LockPassword size={20} color={colors.textSecondary} style={styles.inputIcon} />
+              <View style={styles.labelRow}>
+                <Text style={[styles.label, { color: colors.text }]}>Password</Text>
+                <TouchableOpacity onPress={() => Alert.alert('Forgot Password', 'Please contact support or check system admin to reset your password.')}>
+                  <Text style={styles.forgotText}>Forgot Password?</Text>
+                </TouchableOpacity>
+              </View>
+
+              <View style={[styles.inputWrapper, { backgroundColor: isDark ? '#1E293B' : '#FAFAFA', borderColor: colors.border }]}>
+                <FontAwesome name="lock" size={20} color="#94A3B8" style={styles.inputIcon} />
                 <TextInput
                   style={[styles.input, { color: colors.text }]}
-                  placeholder="Enter password"
+                  placeholder="Enter your password"
                   placeholderTextColor="#94A3B8"
                   value={password}
                   onChangeText={(text) => {
@@ -192,142 +195,122 @@ export default function LoginScreen() {
                   autoCapitalize="none"
                 />
                 <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeBtn}>
-                  {showPassword ? (
-                    <EyeClosed size={20} color={colors.textSecondary} />
-                  ) : (
-                    <Eye size={20} color={colors.textSecondary} />
-                  )}
+                  <FontAwesome name={showPassword ? 'eye-slash' : 'eye'} size={18} color="#94A3B8" />
                 </TouchableOpacity>
               </View>
             </View>
 
-            {/* Keep Me Signed In Checkbox */}
-            <TouchableOpacity
-              style={styles.keepSignedInRow}
-              onPress={() => setKeepSignedIn(!keepSignedIn)}
-              activeOpacity={0.8}
-            >
-              <View
-                style={[
-                  styles.checkbox,
-                  { borderColor: colors.border, backgroundColor: colors.inputBg },
-                  keepSignedIn && { backgroundColor: '#10B981', borderColor: '#10B981' },
-                ]}
-              >
-                {keepSignedIn ? <FontAwesome name="check" size={10} color="#FFFFFF" /> : null}
+            {/* KEEP ME SIGNED IN CHECKBOX */}
+            <TouchableOpacity style={styles.checkboxRow} onPress={() => setKeepSignedIn(!keepSignedIn)} activeOpacity={0.8}>
+              <View style={[styles.checkbox, keepSignedIn && { backgroundColor: '#2563EB', borderColor: '#2563EB' }]}>
+                {keepSignedIn && <FontAwesome name="check" size={10} color="#FFFFFF" />}
               </View>
-              <Text style={[styles.keepSignedInLabel, { color: colors.textSecondary }]}>Keep me signed in</Text>
+              <Text style={[styles.checkboxLabel, { color: colors.text }]}>Keep me signed in</Text>
             </TouchableOpacity>
 
-            {/* Submit Button */}
-            <TouchableOpacity
-              style={[styles.button, { backgroundColor: '#10B981' }]}
-              onPress={handleLogin}
-              disabled={isLoading}
-              activeOpacity={0.8}
-            >
+            {/* SIGN IN BUTTON */}
+            <TouchableOpacity style={styles.signInBtn} onPress={handleLogin} disabled={isLoading} activeOpacity={0.85}>
               {isLoading ? (
                 <ActivityIndicator color="#FFFFFF" size="small" />
               ) : (
-                <View style={styles.buttonRow}>
-                  <Text style={styles.buttonText}>Log In</Text>
-                  <AltArrowRight size={18} color="#FFFFFF" />
-                </View>
+                <Text style={styles.signInBtnText}>Sign In</Text>
               )}
             </TouchableOpacity>
 
-            {/* Quick Biometric & Passcode Sign-In Options */}
-            <View style={styles.quickAuthDivider}>
+            {/* DIVIDER */}
+            <View style={styles.dividerRow}>
               <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
-              <Text style={[styles.dividerText, { color: colors.textSecondary }]}>QUICK BIOMETRIC & PASSCODE</Text>
+              <Text style={[styles.dividerText, { color: colors.textSecondary }]}>or sign in quickly</Text>
               <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
             </View>
 
-            <View style={styles.quickAuthRow}>
-              {/* Fingerprint / Face ID Button */}
+            {/* QUICK LOGIN CARDS */}
+            <View style={styles.quickCardsRow}>
+              {/* Fingerprint Card */}
               <TouchableOpacity
-                style={[styles.quickAuthBtn, { backgroundColor: colors.inputBg, borderColor: colors.border }]}
+                style={[styles.quickCard, { backgroundColor: isDark ? '#1E293B' : '#FFFFFF', borderColor: colors.border }]}
                 onPress={handleBiometricLogin}
+                activeOpacity={0.8}
               >
-                <FontAwesome name="hand-o-up" size={18} color="#10B981" />
-                <Text style={[styles.quickAuthBtnText, { color: colors.text }]}>Fingerprint</Text>
+                <View style={styles.quickIconCircle}>
+                  <FontAwesome name="hand-o-up" size={24} color="#2563EB" />
+                </View>
+                <Text style={[styles.quickCardText, { color: colors.text }]}>Fingerprint</Text>
               </TouchableOpacity>
 
-              {/* Passcode PIN Button */}
+              {/* Passcode Card */}
               <TouchableOpacity
-                style={[styles.quickAuthBtn, { backgroundColor: colors.inputBg, borderColor: colors.border }]}
+                style={[styles.quickCard, { backgroundColor: isDark ? '#1E293B' : '#FFFFFF', borderColor: colors.border }]}
                 onPress={() => {
                   setPasscode('');
                   setShowPasscodeModal(true);
                 }}
+                activeOpacity={0.8}
               >
-                <FontAwesome name="key" size={18} color="#6366F1" />
-                <Text style={[styles.quickAuthBtnText, { color: colors.text }]}>Passcode PIN</Text>
+                <View style={styles.quickIconCircle}>
+                  <FontAwesome name="th" size={22} color="#2563EB" />
+                </View>
+                <Text style={[styles.quickCardText, { color: colors.text }]}>Passcode</Text>
               </TouchableOpacity>
             </View>
 
-            {/* Signup Link */}
-            <View style={styles.signupContainer}>
-              <Text style={[styles.signupText, { color: colors.textSecondary }]}>Don't have an account? </Text>
-              <TouchableOpacity onPress={() => router.push('/register')}>
-                <Text style={styles.signupLink}>Create One</Text>
-              </TouchableOpacity>
+            {/* BOTTOM FOOTER LINK */}
+            <View style={[styles.footerContainer, { borderTopColor: colors.border }]}>
+              <Text style={[styles.footerText, { color: colors.textSecondary }]}>
+                Don’t have an account?{' '}
+                <Text style={styles.footerLink} onPress={() => router.push('/register')}>
+                  Create One
+                </Text>
+              </Text>
             </View>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
 
-      {/* Interactive 4-Digit Passcode Modal */}
-      <Modal visible={showPasscodeModal} transparent animationType="fade" onRequestClose={() => setShowPasscodeModal(false)}>
-        <View style={styles.modalOverlay}>
-          <View style={[styles.passcodeModalCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-            <View style={styles.passcodeHeader}>
-              <Text style={[styles.passcodeTitle, { color: colors.text }]}>Enter 4-Digit Passcode</Text>
-              <TouchableOpacity onPress={() => setShowPasscodeModal(false)}>
-                <FontAwesome name="times" size={18} color={colors.textSecondary} />
-              </TouchableOpacity>
-            </View>
+      {/* NUMPAD SLIDE-UP BOTTOM SHEET MODAL */}
+      <Modal visible={showPasscodeModal} transparent animationType="slide" onRequestClose={() => setShowPasscodeModal(false)}>
+        <TouchableOpacity style={styles.sheetOverlay} activeOpacity={1} onPress={() => setShowPasscodeModal(false)}>
+          <View style={[styles.sheetContainer, { backgroundColor: colors.card, borderColor: colors.border }]} onStartShouldSetResponder={() => true}>
+            <View style={styles.sheetHandle} />
+            <Text style={[styles.sheetTitle, { color: colors.text }]}>Enter 4-Digit Passcode</Text>
+            <Text style={[styles.sheetSub, { color: colors.textSecondary }]}>Enter your PIN code to sign in instantly</Text>
 
-            <Text style={[styles.passcodeSub, { color: colors.textSecondary }]}>
-              Enter your passcode PIN to log in instantly
-            </Text>
-
-            {/* PIN Dots */}
+            {/* PIN DOTS */}
             <View style={styles.pinDotsRow}>
               {[0, 1, 2, 3].map((idx) => (
                 <View
                   key={idx}
                   style={[
                     styles.pinDot,
-                    { borderColor: colors.border, backgroundColor: colors.inputBg },
-                    passcode.length > idx && { backgroundColor: '#10B981', borderColor: '#10B981' },
+                    { borderColor: colors.border, backgroundColor: isDark ? '#334155' : '#F1F5F9' },
+                    passcode.length > idx && { backgroundColor: '#2563EB', borderColor: '#2563EB' },
                   ]}
                 />
               ))}
             </View>
 
-            {/* Keypad Grid */}
-            <View style={styles.keypadGrid}>
-              {['1', '2', '3', '4', '5', '6', '7', '8', '9', 'C', '0', '⌫'].map((item) => (
+            {/* NUMPAD KEYPAD */}
+            <View style={styles.numpadGrid}>
+              {['1', '2', '3', '4', '5', '6', '7', '8', '9', 'C', '0', '⌫'].map((k) => (
                 <TouchableOpacity
-                  key={item}
-                  style={[styles.keypadKey, { backgroundColor: colors.inputBg, borderColor: colors.border }]}
+                  key={k}
+                  style={[styles.numpadKey, { backgroundColor: isDark ? '#1E293B' : '#F8FAFC', borderColor: colors.border }]}
                   onPress={() => {
-                    if (item === 'C') {
+                    if (k === 'C') {
                       setPasscode('');
-                    } else if (item === '⌫') {
-                      setPasscode(prev => prev.slice(0, -1));
+                    } else if (k === '⌫') {
+                      setPasscode((prev) => prev.slice(0, -1));
                     } else {
-                      handlePasscodeKeyPress(item);
+                      handlePasscodeKeyPress(k);
                     }
                   }}
                 >
-                  <Text style={[styles.keypadKeyText, { color: colors.text }]}>{item}</Text>
+                  <Text style={[styles.numpadKeyText, { color: colors.text }]}>{k}</Text>
                 </TouchableOpacity>
               ))}
             </View>
           </View>
-        </View>
+        </TouchableOpacity>
       </Modal>
     </SafeAreaView>
   );
@@ -340,32 +323,46 @@ const styles = StyleSheet.create({
   scrollContainer: {
     flexGrow: 1,
     justifyContent: 'center',
-    paddingHorizontal: 24,
-    paddingVertical: 32,
+    paddingHorizontal: 20,
+    paddingVertical: 24,
+  },
+  card: {
+    borderRadius: 32,
+    borderWidth: 1,
+    padding: 24,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.05,
+    shadowRadius: 24,
+    elevation: 4,
   },
   headerContainer: {
     alignItems: 'center',
-    marginBottom: 28,
+    marginBottom: 24,
   },
-  logoWrapper: {
-    width: 80,
-    height: 80,
-    borderRadius: 24,
-    overflow: 'hidden',
-    borderWidth: 1,
-    marginBottom: 14,
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.12,
-    shadowRadius: 16,
-    elevation: 4,
+  logoBadge: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: '#EFF6FF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
   },
-  logoImage: {
-    width: '100%',
-    height: '100%',
-    resizeMode: 'cover',
+  logoOuterRing: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
   },
-  appName: {
+  logoDot: {
+    position: 'absolute',
+    top: 8,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: '#F59E0B',
+  },
+  title: {
     fontSize: 24,
     fontWeight: '800',
     letterSpacing: -0.5,
@@ -373,24 +370,7 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontSize: 13,
-    textAlign: 'center',
-    paddingHorizontal: 20,
     fontWeight: '500',
-  },
-  formContainer: {
-    borderRadius: 28,
-    padding: 24,
-    borderWidth: 1,
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.04,
-    shadowRadius: 20,
-    elevation: 3,
-  },
-  formTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    marginBottom: 20,
   },
   errorBox: {
     flexDirection: 'row',
@@ -400,8 +380,8 @@ const styles = StyleSheet.create({
     borderColor: '#FCA5A5',
     borderWidth: 1,
     borderRadius: 14,
-    padding: 14,
-    marginBottom: 18,
+    padding: 12,
+    marginBottom: 16,
   },
   errorText: {
     color: '#DC2626',
@@ -410,21 +390,31 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   inputGroup: {
-    marginBottom: 18,
+    marginBottom: 16,
+  },
+  labelRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
   },
   label: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '700',
-    letterSpacing: 0.5,
-    marginBottom: 8,
+    marginBottom: 6,
+  },
+  forgotText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#2563EB',
   },
   inputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderRadius: 14,
+    borderRadius: 16,
+    borderWidth: 1,
     height: 52,
     paddingHorizontal: 14,
-    borderWidth: 1,
   },
   inputIcon: {
     marginRight: 10,
@@ -432,15 +422,15 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     height: '100%',
-    fontSize: 15,
+    fontSize: 14,
   },
   eyeBtn: {
-    padding: 4,
+    padding: 6,
   },
-  keepSignedInRow: {
+  checkboxRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 20,
     gap: 10,
   },
   checkbox: {
@@ -448,111 +438,113 @@ const styles = StyleSheet.create({
     height: 20,
     borderRadius: 6,
     borderWidth: 1.5,
+    borderColor: '#CBD5E1',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  keepSignedInLabel: {
+  checkboxLabel: {
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: '500',
   },
-  button: {
+  signInBtn: {
     height: 52,
-    borderRadius: 14,
+    borderRadius: 16,
+    backgroundColor: '#2563EB',
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 10,
-    shadowColor: '#10B981',
+    shadowColor: '#2563EB',
     shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.2,
+    shadowOpacity: 0.25,
     shadowRadius: 12,
     elevation: 4,
   },
-  buttonRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  buttonText: {
+  signInBtnText: {
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '700',
   },
-  signupContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    marginTop: 20,
-  },
-  signupText: {
-    fontSize: 14,
-  },
-  signupLink: {
-    color: '#10B981',
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  quickAuthDivider: {
+  dividerRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginVertical: 18,
-    gap: 10,
+    marginVertical: 20,
+    gap: 12,
   },
   dividerLine: {
     flex: 1,
     height: 1,
   },
   dividerText: {
-    fontSize: 10,
-    fontWeight: '700',
-    letterSpacing: 0.5,
+    fontSize: 12,
+    fontWeight: '500',
   },
-  quickAuthRow: {
+  quickCardsRow: {
     flexDirection: 'row',
-    gap: 10,
+    gap: 14,
+    marginBottom: 24,
   },
-  quickAuthBtn: {
+  quickCard: {
     flex: 1,
-    height: 46,
-    borderRadius: 14,
+    borderRadius: 20,
     borderWidth: 1,
-    flexDirection: 'row',
+    paddingVertical: 18,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
   },
-  quickAuthBtnText: {
+  quickIconCircle: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: '#EFF6FF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 10,
+  },
+  quickCardText: {
     fontSize: 13,
     fontWeight: '700',
   },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.45)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 24,
-  },
-  passcodeModalCard: {
-    width: '100%',
-    maxWidth: 340,
-    borderRadius: 24,
-    borderWidth: 1,
-    padding: 20,
+  footerContainer: {
+    borderTopWidth: 1,
+    paddingTop: 18,
     alignItems: 'center',
   },
-  passcodeHeader: {
-    width: '100%',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 6,
+  footerText: {
+    fontSize: 14,
+    fontWeight: '500',
   },
-  passcodeTitle: {
-    fontSize: 16,
+  footerLink: {
+    color: '#2563EB',
     fontWeight: '700',
   },
-  passcodeSub: {
+  // Numpad Sheet Styles
+  sheetOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.45)',
+    justifyContent: 'flex-end',
+  },
+  sheetContainer: {
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    borderWidth: 1,
+    borderBottomWidth: 0,
+    padding: 24,
+    alignItems: 'center',
+  },
+  sheetHandle: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: '#CBD5E1',
+    marginBottom: 16,
+  },
+  sheetTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    marginBottom: 4,
+  },
+  sheetSub: {
     fontSize: 12,
     marginBottom: 20,
-    textAlign: 'center',
   },
   pinDotsRow: {
     flexDirection: 'row',
@@ -565,22 +557,23 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     borderWidth: 1.5,
   },
-  keypadGrid: {
+  numpadGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    width: 240,
+    width: 250,
     gap: 12,
     justifyContent: 'center',
+    marginBottom: 12,
   },
-  keypadKey: {
-    width: 68,
+  numpadKey: {
+    width: 70,
     height: 52,
     borderRadius: 16,
     borderWidth: 1,
-    justifyContent: 'center',
     alignItems: 'center',
+    justifyContent: 'center',
   },
-  keypadKeyText: {
+  numpadKeyText: {
     fontSize: 18,
     fontWeight: '700',
   },
