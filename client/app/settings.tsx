@@ -216,6 +216,25 @@ export default function SettingsScreen() {
             </TouchableOpacity>
           </View>
 
+          {/* SECTION 3: HELP & SUPPORT */}
+          <View style={[styles.sectionCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <TouchableOpacity
+              style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}
+              onPress={() => router.push('/help-support')}
+            >
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(99, 102, 241, 0.12)', alignItems: 'center', justifyContent: 'center' }}>
+                  <FontAwesome name="question-circle" size={18} color="#6366F1" />
+                </View>
+                <View>
+                  <Text style={[styles.sectionTitle, { color: colors.text, marginBottom: 2 }]}>Help & Support</Text>
+                  <Text style={{ fontSize: 12, color: colors.textSecondary }}>FAQs, guides & contact care team</Text>
+                </View>
+              </View>
+              <FontAwesome name="angle-right" size={18} color={colors.textSecondary} />
+            </TouchableOpacity>
+          </View>
+
         </ScrollView>
     </SafeAreaView>
   );

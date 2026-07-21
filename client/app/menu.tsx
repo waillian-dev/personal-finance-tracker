@@ -108,10 +108,10 @@ export default function MenuScreen() {
       onPress: () => router.push('/settings'),
     },
     {
-      label: 'Help',
+      label: 'Help & Support',
       icon: <Notes size={20} color="#FFFFFF" />,
       iconBg: '#F59E0B',
-      onPress: () => {},
+      onPress: () => router.push('/help-support'),
     },
   ];
 
