@@ -31,6 +31,7 @@ export default function LoginScreen() {
   const { login, isLoading, error, clearError } = useAuthStore();
   const router = useRouter();
 
+  const [keepSignedIn, setKeepSignedIn] = useState(true);
   const [showPasscodeModal, setShowPasscodeModal] = useState(false);
   const [passcode, setPasscode] = useState('');
   const [isBiometricAvailable, setIsBiometricAvailable] = useState(true);
@@ -62,7 +63,7 @@ export default function LoginScreen() {
         const savedPassword = await getItem('savedPassword');
 
         if (savedEmail && savedPassword) {
-          await login(savedEmail, savedPassword);
+          await login(savedEmail, savedPassword, true);
         } else {
           Alert.alert(
             'Biometric Sign-In',
@@ -86,7 +87,7 @@ export default function LoginScreen() {
         if (savedEmail && savedPassword) {
           setShowPasscodeModal(false);
           setPasscode('');
-          await login(savedEmail, savedPassword);
+          await login(savedEmail, savedPassword, true);
         } else {
           setShowPasscodeModal(false);
           setPasscode('');
@@ -105,7 +106,7 @@ export default function LoginScreen() {
     clearError();
     
     try {
-      await login(email.trim(), password);
+      await login(email.trim(), password, keepSignedIn);
       await setItem('savedEmail', email.trim());
       await setItem('savedPassword', password);
     } catch (err) {
@@ -199,6 +200,24 @@ export default function LoginScreen() {
                 </TouchableOpacity>
               </View>
             </View>
+
+            {/* Keep Me Signed In Checkbox */}
+            <TouchableOpacity
+              style={styles.keepSignedInRow}
+              onPress={() => setKeepSignedIn(!keepSignedIn)}
+              activeOpacity={0.8}
+            >
+              <View
+                style={[
+                  styles.checkbox,
+                  { borderColor: colors.border, backgroundColor: colors.inputBg },
+                  keepSignedIn && { backgroundColor: '#10B981', borderColor: '#10B981' },
+                ]}
+              >
+                {keepSignedIn ? <FontAwesome name="check" size={10} color="#FFFFFF" /> : null}
+              </View>
+              <Text style={[styles.keepSignedInLabel, { color: colors.textSecondary }]}>Keep me signed in</Text>
+            </TouchableOpacity>
 
             {/* Submit Button */}
             <TouchableOpacity
@@ -417,6 +436,24 @@ const styles = StyleSheet.create({
   },
   eyeBtn: {
     padding: 4,
+  },
+  keepSignedInRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+    gap: 10,
+  },
+  checkbox: {
+    width: 20,
+    height: 20,
+    borderRadius: 6,
+    borderWidth: 1.5,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  keepSignedInLabel: {
+    fontSize: 13,
+    fontWeight: '600',
   },
   button: {
     height: 52,

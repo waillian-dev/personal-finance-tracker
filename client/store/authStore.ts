@@ -9,7 +9,7 @@ interface AuthState {
   isLoading: boolean;
   hasSeenOnboarding: boolean;
   error: string | null;
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string, keepSignedIn?: boolean) => Promise<void>;
   register: (name: string, email: string, password: string, currency?: string, theme?: string) => Promise<void>;
   logout: () => Promise<void>;
   initialize: () => Promise<void>;
@@ -39,11 +39,19 @@ export const useAuthStore = create<AuthState>((set) => ({
     set({ isLoading: true });
     try {
       const seenOnboarding = await getItem('hasSeenOnboarding');
+      const keepSignedIn = await getItem('keepSignedIn');
       const token = await getItem('userToken');
       const hasSeen = seenOnboarding === 'true';
 
+      // Check if user opted out of persistent session
+      if (keepSignedIn === 'false') {
+        await deleteItem('userToken');
+        await deleteItem('refreshToken');
+        set({ user: null, token: null, hasSeenOnboarding: hasSeen, isLoading: false });
+        return;
+      }
+
       if (token) {
-        // Fetch current user details
         const response = await api.get('/auth/me');
         if (response.data.success) {
           set({ user: response.data.data, token, hasSeenOnboarding: hasSeen, isLoading: false });
@@ -53,7 +61,6 @@ export const useAuthStore = create<AuthState>((set) => ({
       set({ user: null, token: null, hasSeenOnboarding: hasSeen, isLoading: false });
     } catch (error: any) {
       console.log('App initialization auth check failed:', error.message);
-      // Clean up tokens on error
       await deleteItem('userToken');
       await deleteItem('refreshToken');
       const seenOnboarding = await getItem('hasSeenOnboarding');
@@ -66,14 +73,14 @@ export const useAuthStore = create<AuthState>((set) => ({
     set({ hasSeenOnboarding: true });
   },
 
-  login: async (email, password) => {
+  login: async (email, password, keepSignedIn = true) => {
     set({ isLoading: true, error: null });
     try {
       const response = await api.post('/auth/login', { email, password });
       if (response.data.success) {
         const { token, refreshToken, ...userData } = response.data.data;
         
-        // Save to storage
+        await setItem('keepSignedIn', keepSignedIn ? 'true' : 'false');
         await setItem('userToken', token);
         await setItem('refreshToken', refreshToken);
         
@@ -102,7 +109,7 @@ export const useAuthStore = create<AuthState>((set) => ({
       if (response.data.success) {
         const { token, refreshToken, ...userData } = response.data.data;
         
-        // Save to storage
+        await setItem('keepSignedIn', 'true');
         await setItem('userToken', token);
         await setItem('refreshToken', refreshToken);
         

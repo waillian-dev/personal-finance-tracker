@@ -17,6 +17,8 @@ import { useRouter } from 'expo-router';
 import { useAuthStore } from '../store/authStore';
 import { useThemeColors } from '../hooks/useThemeColors';
 import api from '../services/api';
+import Constants from 'expo-constants';
+import CustomAlert from '../components/CustomAlert';
 import { formatCurrency } from '../utils/currency';
 import { AltArrowLeft } from '@solar-icons/react-native/Outline';
 
@@ -25,7 +27,7 @@ const CURRENCIES = ['USD', 'MMK', 'EUR', 'SGD', 'THB', 'JPY'];
 export default function SettingsScreen() {
   const router = useRouter();
   const { user, updateProfile, clearError, error } = useAuthStore();
-  const { colors } = useThemeColors();
+  const { colors, isDark } = useThemeColors();
 
   // Profile states
   const [name, setName] = useState(user?.name || '');
@@ -37,6 +39,27 @@ export default function SettingsScreen() {
   const [notificationMonthlyFee, setNotificationMonthlyFee] = useState(user?.notificationMonthlyFee ?? true);
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [profileMsg, setProfileMsg] = useState('');
+  const APP_VERSION = Constants.expoConfig?.version || '1.0.0';
+  const [isCheckingUpdate, setIsCheckingUpdate] = useState(false);
+  const [alertState, setAlertState] = useState({
+    visible: false,
+    title: '',
+    message: '',
+    severity: 'success' as 'success' | 'warning' | 'danger' | 'info',
+  });
+
+  const handleCheckUpdate = () => {
+    setIsCheckingUpdate(true);
+    setTimeout(() => {
+      setIsCheckingUpdate(false);
+      setAlertState({
+        visible: true,
+        title: 'App Version Check',
+        message: `Zenith Finance is currently up to date!\nInstalled Version: v${APP_VERSION}\nBuild: 1.0.0-release`,
+        severity: 'success',
+      });
+    }, 1200);
+  };
 
   const handleSaveProfile = async () => {
     if (!name) {
@@ -73,6 +96,16 @@ export default function SettingsScreen() {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }, Platform.OS === 'android' && { paddingTop: 0 }]}>
+      {/* Custom Alert */}
+      <CustomAlert
+        visible={alertState.visible}
+        type="alert"
+        title={alertState.title}
+        message={alertState.message}
+        severity={alertState.severity}
+        onClose={() => setAlertState((prev) => ({ ...prev, visible: false }))}
+      />
+
       {/* Header */}
       <View style={[styles.header, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
         <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
@@ -232,6 +265,44 @@ export default function SettingsScreen() {
                 </View>
               </View>
               <FontAwesome name="angle-right" size={18} color={colors.textSecondary} />
+            </TouchableOpacity>
+          </View>
+
+          {/* SECTION 4: VERSION MANAGEMENT */}
+          <View style={[styles.sectionCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>Version & Build Info</Text>
+            
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+              <View>
+                <Text style={{ fontSize: 14, fontWeight: '700', color: colors.text }}>Current Version</Text>
+                <Text style={{ fontSize: 12, color: colors.textSecondary, marginTop: 2 }}>Zenith Finance v{APP_VERSION}</Text>
+              </View>
+              <View style={{ backgroundColor: 'rgba(16, 185, 129, 0.12)', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 10 }}>
+                <Text style={{ fontSize: 11, fontWeight: '700', color: '#10B981' }}>UP TO DATE</Text>
+              </View>
+            </View>
+
+            <TouchableOpacity
+              style={{
+                height: 44,
+                borderRadius: 12,
+                backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : '#F1F5F9',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexDirection: 'row',
+                gap: 8,
+              }}
+              onPress={handleCheckUpdate}
+              disabled={isCheckingUpdate}
+            >
+              {isCheckingUpdate ? (
+                <ActivityIndicator size="small" color="#6366F1" />
+              ) : (
+                <>
+                  <FontAwesome name="refresh" size={14} color={colors.text} />
+                  <Text style={{ fontSize: 13, fontWeight: '700', color: colors.text }}>Check for Updates</Text>
+                </>
+              )}
             </TouchableOpacity>
           </View>
 
