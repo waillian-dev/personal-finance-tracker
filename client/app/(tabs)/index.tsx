@@ -214,9 +214,12 @@ export default function DashboardScreen() {
     .filter(w => w.type !== 'credit_card')
     .reduce((sum, w) => sum + Math.max(0, Number(w.balance)), 0);
 
-  const totalDebts = wallets
+  const creditCardDebt = wallets
     .filter(w => w.type === 'credit_card')
     .reduce((sum, w) => sum + Math.abs(Math.min(0, Number(w.balance))), 0);
+
+  // Total Debts = Credit Card Debt + Total Friend Payables
+  const totalDebts = creditCardDebt + totalPayables;
 
   // Get dynamic spending data for line chart
   const getTrendData = () => {
@@ -424,13 +427,13 @@ export default function DashboardScreen() {
           {/* Active Balance section with Side-by-side chips */}
           <View style={styles.balanceSectionRow}>
             <View style={styles.balanceLeftColumn}>
-              <Text style={[styles.activeBalanceLabel, { color: headerTextSecondary }]}>Asset</Text>
+              <Text style={[styles.activeBalanceLabel, { color: headerTextSecondary }]}>Active Total Balance</Text>
               <Text style={[styles.activeBalanceValue, { color: headerText }]}>{formatCurrency(totalAssets, user?.currency)}</Text>
             </View>
             
             <View style={styles.chipsRightColumn}>
               <View style={[styles.statChip, { backgroundColor: isDark ? 'rgba(52, 211, 153, 0.15)' : 'rgba(16, 185, 129, 0.12)' }]}>
-                <Text style={[styles.statChipLabel, { color: headerTextSecondary }]}>Active Total Balance</Text>
+                <Text style={[styles.statChipLabel, { color: headerTextSecondary }]}>Asset</Text>
                 <Text style={[styles.statChipValue, { color: isDark ? '#34D399' : '#059669' }]}>
                   {formatCurrency(netWorth, user?.currency)}
                 </Text>
