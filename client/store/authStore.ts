@@ -10,7 +10,7 @@ interface AuthState {
   hasSeenOnboarding: boolean;
   error: string | null;
   login: (email: string, password: string) => Promise<void>;
-  register: (name: string, email: string, password: string) => Promise<void>;
+  register: (name: string, email: string, password: string, currency?: string, theme?: string) => Promise<void>;
   logout: () => Promise<void>;
   initialize: () => Promise<void>;
   completeOnboarding: () => Promise<void>;
@@ -53,7 +53,7 @@ export const useAuthStore = create<AuthState>((set) => ({
       set({ user: null, token: null, hasSeenOnboarding: hasSeen, isLoading: false });
     } catch (error: any) {
       console.log('App initialization auth check failed:', error.message);
-      // Clean up tokens on corruption
+      // Clean up tokens on error
       await deleteItem('userToken');
       await deleteItem('refreshToken');
       const seenOnboarding = await getItem('hasSeenOnboarding');
@@ -91,10 +91,14 @@ export const useAuthStore = create<AuthState>((set) => ({
     }
   },
 
-  register: async (name, email, password) => {
+  register: async (name, email, password, currency, theme) => {
     set({ isLoading: true, error: null });
     try {
-      const response = await api.post('/auth/register', { name, email, password });
+      const payload: any = { name, email, password };
+      if (currency) payload.currency = currency;
+      if (theme) payload.theme = theme;
+
+      const response = await api.post('/auth/register', payload);
       if (response.data.success) {
         const { token, refreshToken, ...userData } = response.data.data;
         
@@ -119,7 +123,6 @@ export const useAuthStore = create<AuthState>((set) => ({
   logout: async () => {
     set({ isLoading: true });
     try {
-      // Best effort API logout
       const refreshToken = await getItem('refreshToken');
       if (refreshToken) {
         await api.post('/auth/logout', { refreshToken }).catch(() => {});
@@ -127,7 +130,6 @@ export const useAuthStore = create<AuthState>((set) => ({
     } catch (e) {
       console.log('Error logging out from server:', e);
     } finally {
-      // Clear secure store
       await deleteItem('userToken');
       await deleteItem('refreshToken');
       set({ user: null, token: null, isLoading: false, error: null });

@@ -20,7 +20,7 @@ const generateRefreshToken = (id) => {
 // @access  Public
 const registerUser = async (req, res) => {
   try {
-    const { name, email, password } = req.body;
+    const { name, email, password, currency, theme } = req.body;
 
     if (!name || !email || !password) {
       return res.status(400).json({ success: false, error: 'Please add all fields' });
@@ -33,12 +33,17 @@ const registerUser = async (req, res) => {
       return res.status(400).json({ success: false, error: 'User already exists' });
     }
 
-    // Create user
-    const user = await User.create({
+    // Build user creation data
+    const newUserData = {
       name,
       email,
       password,
-    });
+    };
+    if (currency) newUserData.currency = currency;
+    if (theme) newUserData.theme = theme;
+
+    // Create user
+    const user = await User.create(newUserData);
 
     if (user) {
       const token = generateToken(user._id);
@@ -54,6 +59,8 @@ const registerUser = async (req, res) => {
           _id: user._id,
           name: user.name,
           email: user.email,
+          currency: user.currency,
+          theme: user.theme,
           token,
           refreshToken,
         },

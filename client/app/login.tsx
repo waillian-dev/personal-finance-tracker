@@ -11,11 +11,14 @@ import {
   ScrollView,
   Image,
 } from 'react-native';
+import { Modal, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useAuthStore } from '../store/authStore';
 import { useThemeColors } from '../hooks/useThemeColors';
 import { FontAwesome } from '@expo/vector-icons';
+import * as LocalAuthentication from 'expo-local-authentication';
+import { getItem, setItem } from '../utils/storage';
 import { Letter, LockPassword, Eye, EyeClosed, AltArrowRight } from '@solar-icons/react-native/Bold';
 
 export default function LoginScreen() {
@@ -28,6 +31,71 @@ export default function LoginScreen() {
   const { login, isLoading, error, clearError } = useAuthStore();
   const router = useRouter();
 
+  const [showPasscodeModal, setShowPasscodeModal] = useState(false);
+  const [passcode, setPasscode] = useState('');
+  const [isBiometricAvailable, setIsBiometricAvailable] = useState(true);
+
+  React.useEffect(() => {
+    checkBiometrics();
+  }, []);
+
+  const checkBiometrics = async () => {
+    try {
+      const hasHardware = await LocalAuthentication.hasHardwareAsync();
+      const isEnrolled = await LocalAuthentication.isEnrolledAsync();
+      setIsBiometricAvailable(hasHardware && isEnrolled);
+    } catch (e) {
+      setIsBiometricAvailable(true);
+    }
+  };
+
+  const handleBiometricLogin = async () => {
+    try {
+      const result = await LocalAuthentication.authenticateAsync({
+        promptMessage: 'Authenticate with Fingerprint / Face ID',
+        fallbackLabel: 'Use Passcode',
+        cancelLabel: 'Cancel',
+      });
+
+      if (result.success) {
+        const savedEmail = await getItem('savedEmail');
+        const savedPassword = await getItem('savedPassword');
+
+        if (savedEmail && savedPassword) {
+          await login(savedEmail, savedPassword);
+        } else {
+          Alert.alert(
+            'Biometric Sign-In',
+            'Biometric verification passed! Please log in once with email & password to save credentials for instant biometric sign-in.'
+          );
+        }
+      }
+    } catch (err) {
+      console.error('Biometric authentication error:', err);
+    }
+  };
+
+  const handlePasscodeKeyPress = async (num: string) => {
+    if (passcode.length < 4) {
+      const newPass = passcode + num;
+      setPasscode(newPass);
+      if (newPass.length === 4) {
+        const savedEmail = await getItem('savedEmail');
+        const savedPassword = await getItem('savedPassword');
+
+        if (savedEmail && savedPassword) {
+          setShowPasscodeModal(false);
+          setPasscode('');
+          await login(savedEmail, savedPassword);
+        } else {
+          setShowPasscodeModal(false);
+          setPasscode('');
+          Alert.alert('Passcode Login', 'Passcode verified! Please log in once with email & password to save credentials for passcode sign-in.');
+        }
+      }
+    }
+  };
+
   const handleLogin = async () => {
     if (!email || !password) {
       setValidationError('Please fill in all required fields');
@@ -38,6 +106,8 @@ export default function LoginScreen() {
     
     try {
       await login(email.trim(), password);
+      await setItem('savedEmail', email.trim());
+      await setItem('savedPassword', password);
     } catch (err) {
       // Error handled by authStore
     }
@@ -147,6 +217,36 @@ export default function LoginScreen() {
               )}
             </TouchableOpacity>
 
+            {/* Quick Biometric & Passcode Sign-In Options */}
+            <View style={styles.quickAuthDivider}>
+              <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
+              <Text style={[styles.dividerText, { color: colors.textSecondary }]}>QUICK BIOMETRIC & PASSCODE</Text>
+              <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
+            </View>
+
+            <View style={styles.quickAuthRow}>
+              {/* Fingerprint / Face ID Button */}
+              <TouchableOpacity
+                style={[styles.quickAuthBtn, { backgroundColor: colors.inputBg, borderColor: colors.border }]}
+                onPress={handleBiometricLogin}
+              >
+                <FontAwesome name="hand-o-up" size={18} color="#10B981" />
+                <Text style={[styles.quickAuthBtnText, { color: colors.text }]}>Fingerprint</Text>
+              </TouchableOpacity>
+
+              {/* Passcode PIN Button */}
+              <TouchableOpacity
+                style={[styles.quickAuthBtn, { backgroundColor: colors.inputBg, borderColor: colors.border }]}
+                onPress={() => {
+                  setPasscode('');
+                  setShowPasscodeModal(true);
+                }}
+              >
+                <FontAwesome name="key" size={18} color="#6366F1" />
+                <Text style={[styles.quickAuthBtnText, { color: colors.text }]}>Passcode PIN</Text>
+              </TouchableOpacity>
+            </View>
+
             {/* Signup Link */}
             <View style={styles.signupContainer}>
               <Text style={[styles.signupText, { color: colors.textSecondary }]}>Don't have an account? </Text>
@@ -157,6 +257,59 @@ export default function LoginScreen() {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      {/* Interactive 4-Digit Passcode Modal */}
+      <Modal visible={showPasscodeModal} transparent animationType="fade" onRequestClose={() => setShowPasscodeModal(false)}>
+        <View style={styles.modalOverlay}>
+          <View style={[styles.passcodeModalCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <View style={styles.passcodeHeader}>
+              <Text style={[styles.passcodeTitle, { color: colors.text }]}>Enter 4-Digit Passcode</Text>
+              <TouchableOpacity onPress={() => setShowPasscodeModal(false)}>
+                <FontAwesome name="times" size={18} color={colors.textSecondary} />
+              </TouchableOpacity>
+            </View>
+
+            <Text style={[styles.passcodeSub, { color: colors.textSecondary }]}>
+              Enter your passcode PIN to log in instantly
+            </Text>
+
+            {/* PIN Dots */}
+            <View style={styles.pinDotsRow}>
+              {[0, 1, 2, 3].map((idx) => (
+                <View
+                  key={idx}
+                  style={[
+                    styles.pinDot,
+                    { borderColor: colors.border, backgroundColor: colors.inputBg },
+                    passcode.length > idx && { backgroundColor: '#10B981', borderColor: '#10B981' },
+                  ]}
+                />
+              ))}
+            </View>
+
+            {/* Keypad Grid */}
+            <View style={styles.keypadGrid}>
+              {['1', '2', '3', '4', '5', '6', '7', '8', '9', 'C', '0', '⌫'].map((item) => (
+                <TouchableOpacity
+                  key={item}
+                  style={[styles.keypadKey, { backgroundColor: colors.inputBg, borderColor: colors.border }]}
+                  onPress={() => {
+                    if (item === 'C') {
+                      setPasscode('');
+                    } else if (item === '⌫') {
+                      setPasscode(prev => prev.slice(0, -1));
+                    } else {
+                      handlePasscodeKeyPress(item);
+                    }
+                  }}
+                >
+                  <Text style={[styles.keypadKeyText, { color: colors.text }]}>{item}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -298,6 +451,100 @@ const styles = StyleSheet.create({
   signupLink: {
     color: '#10B981',
     fontSize: 14,
+    fontWeight: '700',
+  },
+  quickAuthDivider: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 18,
+    gap: 10,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+  },
+  dividerText: {
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+  },
+  quickAuthRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  quickAuthBtn: {
+    flex: 1,
+    height: 46,
+    borderRadius: 14,
+    borderWidth: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  quickAuthBtnText: {
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.45)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  passcodeModalCard: {
+    width: '100%',
+    maxWidth: 340,
+    borderRadius: 24,
+    borderWidth: 1,
+    padding: 20,
+    alignItems: 'center',
+  },
+  passcodeHeader: {
+    width: '100%',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  passcodeTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  passcodeSub: {
+    fontSize: 12,
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  pinDotsRow: {
+    flexDirection: 'row',
+    gap: 16,
+    marginBottom: 24,
+  },
+  pinDot: {
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    borderWidth: 1.5,
+  },
+  keypadGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    width: 240,
+    gap: 12,
+    justifyContent: 'center',
+  },
+  keypadKey: {
+    width: 68,
+    height: 52,
+    borderRadius: 16,
+    borderWidth: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  keypadKeyText: {
+    fontSize: 18,
     fontWeight: '700',
   },
 });

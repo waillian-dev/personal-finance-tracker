@@ -26,6 +26,16 @@ export default function RegisterScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [validationError, setValidationError] = useState('');
   
+  const [selectedCurrency, setSelectedCurrency] = useState('USD');
+  const [selectedTheme, setSelectedTheme] = useState<'light' | 'dark' | 'system'>('system');
+
+  const currencies = ['USD', 'MMK', 'EUR', 'SGD', 'THB', 'JPY'];
+  const themes = [
+    { key: 'system', label: 'System' },
+    { key: 'light', label: 'Light' },
+    { key: 'dark', label: 'Dark' },
+  ] as const;
+
   const { register, isLoading, error, clearError } = useAuthStore();
   const router = useRouter();
 
@@ -42,7 +52,7 @@ export default function RegisterScreen() {
     clearError();
     
     try {
-      await register(name.trim(), email.trim(), password);
+      await register(name.trim(), email.trim(), password, selectedCurrency, selectedTheme);
     } catch (err) {
       // Error handled by store state
     }
@@ -150,6 +160,50 @@ export default function RegisterScreen() {
                     <Eye size={20} color={colors.textSecondary} />
                   )}
                 </TouchableOpacity>
+              </View>
+            </View>
+
+            {/* Currency Preference Field */}
+            <View style={styles.inputGroup}>
+              <Text style={[styles.label, { color: colors.textSecondary }]}>Default Currency</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
+                {currencies.map((c) => (
+                  <TouchableOpacity
+                    key={c}
+                    style={[
+                      styles.selectorChip,
+                      { backgroundColor: colors.inputBg, borderColor: colors.border },
+                      selectedCurrency === c && { borderColor: '#10B981', backgroundColor: isDark ? 'rgba(16, 185, 129, 0.15)' : 'rgba(16, 185, 129, 0.08)' }
+                    ]}
+                    onPress={() => setSelectedCurrency(c)}
+                  >
+                    <Text style={[styles.selectorChipText, { color: colors.text }, selectedCurrency === c && { color: '#10B981', fontWeight: '700' }]}>
+                      {c}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+
+            {/* Theme Preference Field */}
+            <View style={styles.inputGroup}>
+              <Text style={[styles.label, { color: colors.textSecondary }]}>App Theme Preference</Text>
+              <View style={styles.themeRow}>
+                {themes.map((t) => (
+                  <TouchableOpacity
+                    key={t.key}
+                    style={[
+                      styles.themeChip,
+                      { backgroundColor: colors.inputBg, borderColor: colors.border },
+                      selectedTheme === t.key && { borderColor: '#10B981', backgroundColor: isDark ? 'rgba(16, 185, 129, 0.15)' : 'rgba(16, 185, 129, 0.08)' }
+                    ]}
+                    onPress={() => setSelectedTheme(t.key)}
+                  >
+                    <Text style={[styles.selectorChipText, { color: colors.text }, selectedTheme === t.key && { color: '#10B981', fontWeight: '700' }]}>
+                      {t.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
               </View>
             </View>
 
@@ -287,6 +341,27 @@ const styles = StyleSheet.create({
   },
   eyeBtn: {
     padding: 4,
+  },
+  selectorChip: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  selectorChipText: {
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  themeRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  themeChip: {
+    flex: 1,
+    paddingVertical: 10,
+    borderRadius: 12,
+    borderWidth: 1,
+    alignItems: 'center',
   },
   button: {
     height: 52,
