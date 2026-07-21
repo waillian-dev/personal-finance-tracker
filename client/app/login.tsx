@@ -115,154 +115,149 @@ export default function LoginScreen() {
   };
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: isDark ? '#0F172A' : '#EFF6FF' }, Platform.OS === 'android' && { paddingTop: 0 }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }, Platform.OS === 'android' && { paddingTop: 0 }]}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
         <ScrollView contentContainerStyle={styles.scrollContainer} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
           
-          {/* MAIN CARD CONTAINER */}
-          <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
-            
-            {/* LOGO ICON & HEADER */}
-            <View style={styles.headerContainer}>
-              <View style={styles.logoBadge}>
-                {/* Modern C-pin Badge */}
-                <View style={styles.logoOuterRing}>
-                  <FontAwesome name="map-marker" size={36} color="#1E40AF" />
-                  <View style={styles.logoDot} />
-                </View>
-              </View>
-
-              <Text style={[styles.title, { color: colors.text }]}>Welcome Back!</Text>
-              <Text style={[styles.subtitle, { color: colors.textSecondary }]}>Sign in to continue to your account</Text>
-            </View>
-
-            {/* ALERTS */}
-            {error ? (
-              <View style={styles.errorBox}>
-                <FontAwesome name="exclamation-circle" size={16} color="#DC2626" />
-                <Text style={styles.errorText}>{error}</Text>
-              </View>
-            ) : null}
-
-            {validationError ? (
-              <View style={styles.errorBox}>
-                <FontAwesome name="exclamation-circle" size={16} color="#DC2626" />
-                <Text style={styles.errorText}>{validationError}</Text>
-              </View>
-            ) : null}
-
-            {/* EMAIL INPUT */}
-            <View style={styles.inputGroup}>
-              <Text style={[styles.label, { color: colors.text }]}>Email</Text>
-              <View style={[styles.inputWrapper, { backgroundColor: isDark ? '#1E293B' : '#FAFAFA', borderColor: colors.border }]}>
-                <FontAwesome name="envelope-o" size={18} color="#94A3B8" style={styles.inputIcon} />
-                <TextInput
-                  style={[styles.input, { color: colors.text }]}
-                  placeholder="Enter your email"
-                  placeholderTextColor="#94A3B8"
-                  value={email}
-                  onChangeText={(text) => {
-                    setEmail(text);
-                    if (error) clearError();
-                  }}
-                  autoCapitalize="none"
-                  keyboardType="email-address"
-                />
+          {/* LOGO ICON & HEADER */}
+          <View style={styles.headerContainer}>
+            <View style={styles.logoBadge}>
+              <View style={styles.logoOuterRing}>
+                <FontAwesome name="map-marker" size={36} color="#1E40AF" />
+                <View style={styles.logoDot} />
               </View>
             </View>
 
-            {/* PASSWORD INPUT & FORGOT LINK */}
-            <View style={styles.inputGroup}>
-              <View style={styles.labelRow}>
-                <Text style={[styles.label, { color: colors.text }]}>Password</Text>
-                <TouchableOpacity onPress={() => Alert.alert('Forgot Password', 'Please contact support or check system admin to reset your password.')}>
-                  <Text style={styles.forgotText}>Forgot Password?</Text>
-                </TouchableOpacity>
-              </View>
+            <Text style={[styles.title, { color: colors.text }]}>Welcome Back!</Text>
+            <Text style={[styles.subtitle, { color: colors.textSecondary }]}>Sign in to continue to your account</Text>
+          </View>
 
-              <View style={[styles.inputWrapper, { backgroundColor: isDark ? '#1E293B' : '#FAFAFA', borderColor: colors.border }]}>
-                <FontAwesome name="lock" size={20} color="#94A3B8" style={styles.inputIcon} />
-                <TextInput
-                  style={[styles.input, { color: colors.text }]}
-                  placeholder="Enter your password"
-                  placeholderTextColor="#94A3B8"
-                  value={password}
-                  onChangeText={(text) => {
-                    setPassword(text);
-                    if (error) clearError();
-                  }}
-                  secureTextEntry={!showPassword}
-                  autoCapitalize="none"
-                />
-                <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeBtn}>
-                  <FontAwesome name={showPassword ? 'eye-slash' : 'eye'} size={18} color="#94A3B8" />
-                </TouchableOpacity>
-              </View>
+          {/* ALERTS */}
+          {error ? (
+            <View style={styles.errorBox}>
+              <FontAwesome name="exclamation-circle" size={16} color="#DC2626" />
+              <Text style={styles.errorText}>{error}</Text>
             </View>
+          ) : null}
 
-            {/* KEEP ME SIGNED IN CHECKBOX */}
-            <TouchableOpacity style={styles.checkboxRow} onPress={() => setKeepSignedIn(!keepSignedIn)} activeOpacity={0.8}>
-              <View style={[styles.checkbox, keepSignedIn && { backgroundColor: '#2563EB', borderColor: '#2563EB' }]}>
-                {keepSignedIn && <FontAwesome name="check" size={10} color="#FFFFFF" />}
-              </View>
-              <Text style={[styles.checkboxLabel, { color: colors.text }]}>Keep me signed in</Text>
-            </TouchableOpacity>
-
-            {/* SIGN IN BUTTON */}
-            <TouchableOpacity style={styles.signInBtn} onPress={handleLogin} disabled={isLoading} activeOpacity={0.85}>
-              {isLoading ? (
-                <ActivityIndicator color="#FFFFFF" size="small" />
-              ) : (
-                <Text style={styles.signInBtnText}>Sign In</Text>
-              )}
-            </TouchableOpacity>
-
-            {/* DIVIDER */}
-            <View style={styles.dividerRow}>
-              <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
-              <Text style={[styles.dividerText, { color: colors.textSecondary }]}>or sign in quickly</Text>
-              <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
+          {validationError ? (
+            <View style={styles.errorBox}>
+              <FontAwesome name="exclamation-circle" size={16} color="#DC2626" />
+              <Text style={styles.errorText}>{validationError}</Text>
             </View>
+          ) : null}
 
-            {/* QUICK LOGIN CARDS */}
-            <View style={styles.quickCardsRow}>
-              {/* Fingerprint Card */}
-              <TouchableOpacity
-                style={[styles.quickCard, { backgroundColor: isDark ? '#1E293B' : '#FFFFFF', borderColor: colors.border }]}
-                onPress={handleBiometricLogin}
-                activeOpacity={0.8}
-              >
-                <View style={styles.quickIconCircle}>
-                  <FontAwesome name="hand-o-up" size={24} color="#2563EB" />
-                </View>
-                <Text style={[styles.quickCardText, { color: colors.text }]}>Fingerprint</Text>
-              </TouchableOpacity>
-
-              {/* Passcode Card */}
-              <TouchableOpacity
-                style={[styles.quickCard, { backgroundColor: isDark ? '#1E293B' : '#FFFFFF', borderColor: colors.border }]}
-                onPress={() => {
-                  setPasscode('');
-                  setShowPasscodeModal(true);
+          {/* EMAIL INPUT */}
+          <View style={styles.inputGroup}>
+            <Text style={[styles.label, { color: colors.text }]}>Email</Text>
+            <View style={[styles.inputWrapper, { backgroundColor: colors.inputBg, borderColor: colors.border }]}>
+              <FontAwesome name="envelope-o" size={18} color="#94A3B8" style={styles.inputIcon} />
+              <TextInput
+                style={[styles.input, { color: colors.text }]}
+                placeholder="Enter your email"
+                placeholderTextColor="#94A3B8"
+                value={email}
+                onChangeText={(text) => {
+                  setEmail(text);
+                  if (error) clearError();
                 }}
-                activeOpacity={0.8}
-              >
-                <View style={styles.quickIconCircle}>
-                  <FontAwesome name="th" size={22} color="#2563EB" />
-                </View>
-                <Text style={[styles.quickCardText, { color: colors.text }]}>Passcode</Text>
+                autoCapitalize="none"
+                keyboardType="email-address"
+              />
+            </View>
+          </View>
+
+          {/* PASSWORD INPUT & FORGOT LINK */}
+          <View style={styles.inputGroup}>
+            <View style={styles.labelRow}>
+              <Text style={[styles.label, { color: colors.text }]}>Password</Text>
+              <TouchableOpacity onPress={() => Alert.alert('Forgot Password', 'Please contact support or check system admin to reset your password.')}>
+                <Text style={styles.forgotText}>Forgot Password?</Text>
               </TouchableOpacity>
             </View>
 
-            {/* BOTTOM FOOTER LINK */}
-            <View style={[styles.footerContainer, { borderTopColor: colors.border }]}>
-              <Text style={[styles.footerText, { color: colors.textSecondary }]}>
-                Don’t have an account?{' '}
-                <Text style={styles.footerLink} onPress={() => router.push('/register')}>
-                  Create One
-                </Text>
-              </Text>
+            <View style={[styles.inputWrapper, { backgroundColor: colors.inputBg, borderColor: colors.border }]}>
+              <FontAwesome name="lock" size={20} color="#94A3B8" style={styles.inputIcon} />
+              <TextInput
+                style={[styles.input, { color: colors.text }]}
+                placeholder="Enter your password"
+                placeholderTextColor="#94A3B8"
+                value={password}
+                onChangeText={(text) => {
+                  setPassword(text);
+                  if (error) clearError();
+                }}
+                secureTextEntry={!showPassword}
+                autoCapitalize="none"
+              />
+              <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeBtn}>
+                <FontAwesome name={showPassword ? 'eye-slash' : 'eye'} size={18} color="#94A3B8" />
+              </TouchableOpacity>
             </View>
+          </View>
+
+          {/* KEEP ME SIGNED IN CHECKBOX */}
+          <TouchableOpacity style={styles.checkboxRow} onPress={() => setKeepSignedIn(!keepSignedIn)} activeOpacity={0.8}>
+            <View style={[styles.checkbox, keepSignedIn && { backgroundColor: '#2563EB', borderColor: '#2563EB' }]}>
+              {keepSignedIn && <FontAwesome name="check" size={10} color="#FFFFFF" />}
+            </View>
+            <Text style={[styles.checkboxLabel, { color: colors.text }]}>Keep me signed in</Text>
+          </TouchableOpacity>
+
+          {/* SIGN IN BUTTON */}
+          <TouchableOpacity style={styles.signInBtn} onPress={handleLogin} disabled={isLoading} activeOpacity={0.85}>
+            {isLoading ? (
+              <ActivityIndicator color="#FFFFFF" size="small" />
+            ) : (
+              <Text style={styles.signInBtnText}>Sign In</Text>
+            )}
+          </TouchableOpacity>
+
+          {/* DIVIDER */}
+          <View style={styles.dividerRow}>
+            <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
+            <Text style={[styles.dividerText, { color: colors.textSecondary }]}>or sign in quickly</Text>
+            <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
+          </View>
+
+          {/* QUICK LOGIN CARDS */}
+          <View style={styles.quickCardsRow}>
+            {/* Fingerprint Card */}
+            <TouchableOpacity
+              style={[styles.quickCard, { backgroundColor: colors.card, borderColor: colors.border }]}
+              onPress={handleBiometricLogin}
+              activeOpacity={0.8}
+            >
+              <View style={[styles.quickIconCircle, { backgroundColor: isDark ? 'rgba(37, 99, 235, 0.15)' : '#EFF6FF' }]}>
+                <FontAwesome name="hand-o-up" size={24} color="#2563EB" />
+              </View>
+              <Text style={[styles.quickCardText, { color: colors.text }]}>Fingerprint</Text>
+            </TouchableOpacity>
+
+            {/* Passcode Card */}
+            <TouchableOpacity
+              style={[styles.quickCard, { backgroundColor: colors.card, borderColor: colors.border }]}
+              onPress={() => {
+                setPasscode('');
+                setShowPasscodeModal(true);
+              }}
+              activeOpacity={0.8}
+            >
+              <View style={[styles.quickIconCircle, { backgroundColor: isDark ? 'rgba(37, 99, 235, 0.15)' : '#EFF6FF' }]}>
+                <FontAwesome name="th" size={22} color="#2563EB" />
+              </View>
+              <Text style={[styles.quickCardText, { color: colors.text }]}>Passcode</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* BOTTOM FOOTER LINK */}
+          <View style={[styles.footerContainer, { borderTopColor: colors.border }]}>
+            <Text style={[styles.footerText, { color: colors.textSecondary }]}>
+              Don’t have an account?{' '}
+              <Text style={styles.footerLink} onPress={() => router.push('/register')}>
+                Create One
+              </Text>
+            </Text>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>

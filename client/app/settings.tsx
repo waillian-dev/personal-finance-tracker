@@ -306,6 +306,23 @@ export default function SettingsScreen() {
             </TouchableOpacity>
           </View>
 
+          {/* SECTION 5: ABOUT ZENITH FINANCE */}
+          <View style={[styles.sectionCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>About Zenith Finance</Text>
+            <Text style={{ fontSize: 13, color: colors.textSecondary, lineHeight: 20, marginBottom: 14 }}>
+              Zenith Finance is a modern personal finance management application designed to track liquid assets, credit debts, recurring automated transactions, and friend split ledgers.
+            </Text>
+            
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', borderTopWidth: 1, borderTopColor: colors.border, paddingTop: 12 }}>
+              <Text style={{ fontSize: 12, color: colors.textSecondary }}>Developer</Text>
+              <Text style={{ fontSize: 12, fontWeight: '600', color: colors.text }}>Waillian Dev</Text>
+            </View>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingTop: 6 }}>
+              <Text style={{ fontSize: 12, color: colors.textSecondary }}>Platform</Text>
+              <Text style={{ fontSize: 12, fontWeight: '600', color: colors.text }}>Expo / React Native</Text>
+            </View>
+          </View>
+
         </ScrollView>
     </SafeAreaView>
   );

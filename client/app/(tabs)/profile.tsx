@@ -221,20 +221,33 @@ export default function ProfileScreen() {
           </View>
         </View>
 
-        {/* Group 3: GENERAL */}
+        {/* Group 3: GENERAL & HELP CENTER */}
         <Text style={[styles.sectionHeader, { color: colors.textSecondary }]}>GENERAL</Text>
         <View style={[styles.menuGroup, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          <TouchableOpacity style={[styles.menuItem, { borderBottomColor: colors.border }]}>
-            {renderIcon(Global, 'rgba(59, 130, 246, 0.1)', '#3B82F6')}
-            <Text style={[styles.menuText, { color: colors.text }]}>Languages</Text>
-            <AltArrowRight size={18} color={colors.textSecondary} />
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.menuItem}>
+          <TouchableOpacity
+            style={styles.menuItem}
+            onPress={() => router.push('/help-support')}
+          >
             {renderIcon(QuestionCircle, 'rgba(139, 92, 246, 0.1)', '#8B5CF6')}
-            <Text style={[styles.menuText, { color: colors.text }]}>Help and Support</Text>
+            <Text style={[styles.menuText, { color: colors.text }]}>Help Center & Support</Text>
             <AltArrowRight size={18} color={colors.textSecondary} />
           </TouchableOpacity>
+        </View>
+
+        {/* Group 4: ABOUT */}
+        <Text style={[styles.sectionHeader, { color: colors.textSecondary }]}>ABOUT</Text>
+        <View style={[styles.menuGroup, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <View style={[styles.menuItem, { borderBottomColor: colors.border }]}>
+            {renderIcon(Widget, 'rgba(59, 130, 246, 0.1)', '#3B82F6')}
+            <Text style={[styles.menuText, { color: colors.text }]}>App Version</Text>
+            <Text style={{ fontSize: 13, fontWeight: '600', color: colors.textSecondary }}>v1.1.1</Text>
+          </View>
+
+          <View style={styles.menuItem}>
+            {renderIcon(DocumentText, 'rgba(16, 185, 129, 0.1)', '#10B981')}
+            <Text style={[styles.menuText, { color: colors.text }]}>About Zenith Finance</Text>
+            <Text style={{ fontSize: 11, color: colors.textSecondary }}>Smart Finance Tracker</Text>
+          </View>
         </View>
 
         {/* Group 4: LEGAL */}

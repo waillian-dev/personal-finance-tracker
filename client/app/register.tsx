@@ -27,10 +27,8 @@ const CURRENCY_OPTIONS = [
 ];
 
 const THEME_OPTIONS = [
-  { key: 'blue', label: 'Blue', color: '#2563EB' },
-  { key: 'green', label: 'Green', color: '#10B981' },
-  { key: 'purple', label: 'Purple', color: '#8B5CF6' },
-  { key: 'dark', label: 'Dark', color: '#334155' },
+  { key: 'light', label: 'Light Mode', color: '#F8FAFC', textColor: '#0F172A', icon: 'sun-o' },
+  { key: 'dark', label: 'Dark Mode', color: '#1E293B', textColor: '#FFFFFF', icon: 'moon-o' },
 ] as const;
 
 export default function RegisterScreen() {
@@ -43,7 +41,7 @@ export default function RegisterScreen() {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [selectedCurrency, setSelectedCurrency] = useState('USD');
-  const [selectedTheme, setSelectedTheme] = useState<'blue' | 'green' | 'purple' | 'dark'>('blue');
+  const [selectedTheme, setSelectedTheme] = useState<'light' | 'dark'>('light');
   const [showCurrencyModal, setShowCurrencyModal] = useState(false);
   const [validationError, setValidationError] = useState('');
 
@@ -62,174 +60,171 @@ export default function RegisterScreen() {
     clearError();
 
     try {
-      const themeValue = selectedTheme === 'dark' ? 'dark' : 'light';
-      await register(name.trim(), email.trim(), password, selectedCurrency, themeValue);
+      await register(name.trim(), email.trim(), password, selectedCurrency, selectedTheme);
     } catch (err) {
       // Error handled by authStore
     }
   };
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: isDark ? '#0F172A' : '#EFF6FF' }, Platform.OS === 'android' && { paddingTop: 0 }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }, Platform.OS === 'android' && { paddingTop: 0 }]}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
         <ScrollView contentContainerStyle={styles.scrollContainer} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
           
-          {/* MAIN CARD CONTAINER */}
-          <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
-            
-            {/* LOGO ICON & HEADER */}
-            <View style={styles.headerContainer}>
-              <View style={styles.logoBadge}>
-                <View style={styles.logoOuterRing}>
-                  <FontAwesome name="map-marker" size={36} color="#1E40AF" />
-                  <View style={styles.logoDot} />
-                </View>
-              </View>
-
-              <Text style={[styles.title, { color: colors.text }]}>Create Your Account</Text>
-              <Text style={[styles.subtitle, { color: colors.textSecondary }]}>Join us and get started in just a few seconds</Text>
-            </View>
-
-            {/* ALERTS */}
-            {error ? (
-              <View style={styles.errorBox}>
-                <FontAwesome name="exclamation-circle" size={16} color="#DC2626" />
-                <Text style={styles.errorText}>{error}</Text>
-              </View>
-            ) : null}
-
-            {validationError ? (
-              <View style={styles.errorBox}>
-                <FontAwesome name="exclamation-circle" size={16} color="#DC2626" />
-                <Text style={styles.errorText}>{validationError}</Text>
-              </View>
-            ) : null}
-
-            {/* FULLNAME INPUT */}
-            <View style={styles.inputGroup}>
-              <Text style={[styles.label, { color: colors.text }]}>Fullname</Text>
-              <View style={[styles.inputWrapper, { backgroundColor: isDark ? '#1E293B' : '#FAFAFA', borderColor: colors.border }]}>
-                <FontAwesome name="user-o" size={18} color="#94A3B8" style={styles.inputIcon} />
-                <TextInput
-                  style={[styles.input, { color: colors.text }]}
-                  placeholder="Enter your full name"
-                  placeholderTextColor="#94A3B8"
-                  value={name}
-                  onChangeText={(text) => {
-                    setName(text);
-                    if (error) clearError();
-                  }}
-                />
+          {/* LOGO ICON & HEADER */}
+          <View style={styles.headerContainer}>
+            <View style={styles.logoBadge}>
+              <View style={styles.logoOuterRing}>
+                <FontAwesome name="map-marker" size={36} color="#1E40AF" />
+                <View style={styles.logoDot} />
               </View>
             </View>
 
-            {/* EMAIL INPUT */}
-            <View style={styles.inputGroup}>
-              <Text style={[styles.label, { color: colors.text }]}>Email</Text>
-              <View style={[styles.inputWrapper, { backgroundColor: isDark ? '#1E293B' : '#FAFAFA', borderColor: colors.border }]}>
-                <FontAwesome name="envelope-o" size={18} color="#94A3B8" style={styles.inputIcon} />
-                <TextInput
-                  style={[styles.input, { color: colors.text }]}
-                  placeholder="Enter your email"
-                  placeholderTextColor="#94A3B8"
-                  value={email}
-                  onChangeText={(text) => {
-                    setEmail(text);
-                    if (error) clearError();
-                  }}
-                  autoCapitalize="none"
-                  keyboardType="email-address"
-                />
-              </View>
-            </View>
+            <Text style={[styles.title, { color: colors.text }]}>Create Your Account</Text>
+            <Text style={[styles.subtitle, { color: colors.textSecondary }]}>Join us and get started in just a few seconds</Text>
+          </View>
 
-            {/* PASSWORD INPUT */}
-            <View style={styles.inputGroup}>
-              <Text style={[styles.label, { color: colors.text }]}>Password</Text>
-              <View style={[styles.inputWrapper, { backgroundColor: isDark ? '#1E293B' : '#FAFAFA', borderColor: colors.border }]}>
-                <FontAwesome name="lock" size={20} color="#94A3B8" style={styles.inputIcon} />
-                <TextInput
-                  style={[styles.input, { color: colors.text }]}
-                  placeholder="Create a strong password"
-                  placeholderTextColor="#94A3B8"
-                  value={password}
-                  onChangeText={(text) => {
-                    setPassword(text);
-                    if (error) clearError();
-                  }}
-                  secureTextEntry={!showPassword}
-                  autoCapitalize="none"
-                />
-                <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeBtn}>
-                  <FontAwesome name={showPassword ? 'eye-slash' : 'eye'} size={18} color="#94A3B8" />
-                </TouchableOpacity>
-              </View>
+          {/* ALERTS */}
+          {error ? (
+            <View style={styles.errorBox}>
+              <FontAwesome name="exclamation-circle" size={16} color="#DC2626" />
+              <Text style={styles.errorText}>{error}</Text>
             </View>
+          ) : null}
 
-            {/* CURRENCY SELECTOR DROPDOWN */}
-            <View style={styles.inputGroup}>
-              <Text style={[styles.label, { color: colors.text }]}>Currency</Text>
-              <TouchableOpacity
-                style={[styles.dropdownWrapper, { backgroundColor: isDark ? '#1E293B' : '#FAFAFA', borderColor: colors.border }]}
-                onPress={() => setShowCurrencyModal(true)}
-                activeOpacity={0.8}
-              >
-                <View style={styles.currencyIconBg}>
-                  <Text style={styles.currencySymbol}>{activeCurrencyObj.symbol}</Text>
-                </View>
-                <Text style={[styles.dropdownText, { color: colors.text }]}>{activeCurrencyObj.label}</Text>
-                <FontAwesome name="chevron-down" size={12} color="#94A3B8" />
+          {validationError ? (
+            <View style={styles.errorBox}>
+              <FontAwesome name="exclamation-circle" size={16} color="#DC2626" />
+              <Text style={styles.errorText}>{validationError}</Text>
+            </View>
+          ) : null}
+
+          {/* FULLNAME INPUT */}
+          <View style={styles.inputGroup}>
+            <Text style={[styles.label, { color: colors.text }]}>Fullname</Text>
+            <View style={[styles.inputWrapper, { backgroundColor: colors.inputBg, borderColor: colors.border }]}>
+              <FontAwesome name="user-o" size={18} color="#94A3B8" style={styles.inputIcon} />
+              <TextInput
+                style={[styles.input, { color: colors.text }]}
+                placeholder="Enter your full name"
+                placeholderTextColor="#94A3B8"
+                value={name}
+                onChangeText={(text) => {
+                  setName(text);
+                  if (error) clearError();
+                }}
+              />
+            </View>
+          </View>
+
+          {/* EMAIL INPUT */}
+          <View style={styles.inputGroup}>
+            <Text style={[styles.label, { color: colors.text }]}>Email</Text>
+            <View style={[styles.inputWrapper, { backgroundColor: colors.inputBg, borderColor: colors.border }]}>
+              <FontAwesome name="envelope-o" size={18} color="#94A3B8" style={styles.inputIcon} />
+              <TextInput
+                style={[styles.input, { color: colors.text }]}
+                placeholder="Enter your email"
+                placeholderTextColor="#94A3B8"
+                value={email}
+                onChangeText={(text) => {
+                  setEmail(text);
+                  if (error) clearError();
+                }}
+                autoCapitalize="none"
+                keyboardType="email-address"
+              />
+            </View>
+          </View>
+
+          {/* PASSWORD INPUT */}
+          <View style={styles.inputGroup}>
+            <Text style={[styles.label, { color: colors.text }]}>Password</Text>
+            <View style={[styles.inputWrapper, { backgroundColor: colors.inputBg, borderColor: colors.border }]}>
+              <FontAwesome name="lock" size={20} color="#94A3B8" style={styles.inputIcon} />
+              <TextInput
+                style={[styles.input, { color: colors.text }]}
+                placeholder="Create a strong password"
+                placeholderTextColor="#94A3B8"
+                value={password}
+                onChangeText={(text) => {
+                  setPassword(text);
+                  if (error) clearError();
+                }}
+                secureTextEntry={!showPassword}
+                autoCapitalize="none"
+              />
+              <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeBtn}>
+                <FontAwesome name={showPassword ? 'eye-slash' : 'eye'} size={18} color="#94A3B8" />
               </TouchableOpacity>
             </View>
+          </View>
 
-            {/* THEMES SELECTOR GRID */}
-            <View style={styles.inputGroup}>
-              <Text style={[styles.label, { color: colors.text }]}>Themes</Text>
-              <View style={styles.themeGrid}>
-                {THEME_OPTIONS.map((t) => {
-                  const isSelected = selectedTheme === t.key;
-                  return (
-                    <TouchableOpacity
-                      key={t.key}
-                      style={[
-                        styles.themeCard,
-                        { backgroundColor: isDark ? '#1E293B' : '#FFFFFF', borderColor: isSelected ? '#2563EB' : colors.border },
-                        isSelected && styles.themeCardSelected,
-                      ]}
-                      onPress={() => setSelectedTheme(t.key)}
-                      activeOpacity={0.8}
-                    >
-                      {isSelected && (
-                        <View style={styles.checkBadge}>
-                          <FontAwesome name="check" size={8} color="#FFFFFF" />
-                        </View>
-                      )}
-                      <View style={[styles.colorCircle, { backgroundColor: t.color }]} />
-                      <Text style={[styles.themeLabel, { color: colors.text }, isSelected && { fontWeight: '700' }]}>{t.label}</Text>
-                    </TouchableOpacity>
-                  );
-                })}
+          {/* CURRENCY SELECTOR DROPDOWN */}
+          <View style={styles.inputGroup}>
+            <Text style={[styles.label, { color: colors.text }]}>Currency</Text>
+            <TouchableOpacity
+              style={[styles.dropdownWrapper, { backgroundColor: colors.inputBg, borderColor: colors.border }]}
+              onPress={() => setShowCurrencyModal(true)}
+              activeOpacity={0.8}
+            >
+              <View style={styles.currencyIconBg}>
+                <Text style={styles.currencySymbol}>{activeCurrencyObj.symbol}</Text>
               </View>
-            </View>
-
-            {/* CREATE ACCOUNT BUTTON */}
-            <TouchableOpacity style={styles.submitBtn} onPress={handleRegister} disabled={isLoading} activeOpacity={0.85}>
-              {isLoading ? (
-                <ActivityIndicator color="#FFFFFF" size="small" />
-              ) : (
-                <Text style={styles.submitBtnText}>Create Account</Text>
-              )}
+              <Text style={[styles.dropdownText, { color: colors.text }]}>{activeCurrencyObj.label}</Text>
+              <FontAwesome name="chevron-down" size={12} color="#94A3B8" />
             </TouchableOpacity>
+          </View>
 
-            {/* BOTTOM FOOTER LINK */}
-            <View style={[styles.footerContainer, { borderTopColor: colors.border }]}>
-              <Text style={[styles.footerText, { color: colors.textSecondary }]}>
-                Already have an account?{' '}
-                <Text style={styles.footerLink} onPress={() => router.push('/login')}>
-                  Login
-                </Text>
-              </Text>
+          {/* THEMES SELECTOR (LIGHT & DARK ONLY) */}
+          <View style={styles.inputGroup}>
+            <Text style={[styles.label, { color: colors.text }]}>App Theme Preference</Text>
+            <View style={styles.themeGrid}>
+              {THEME_OPTIONS.map((t) => {
+                const isSelected = selectedTheme === t.key;
+                return (
+                  <TouchableOpacity
+                    key={t.key}
+                    style={[
+                      styles.themeCard,
+                      { backgroundColor: colors.card, borderColor: isSelected ? '#2563EB' : colors.border },
+                      isSelected && styles.themeCardSelected,
+                    ]}
+                    onPress={() => setSelectedTheme(t.key)}
+                    activeOpacity={0.8}
+                  >
+                    {isSelected && (
+                      <View style={styles.checkBadge}>
+                        <FontAwesome name="check" size={8} color="#FFFFFF" />
+                      </View>
+                    )}
+                    <View style={[styles.colorCircle, { backgroundColor: t.color, borderWidth: 1, borderColor: '#CBD5E1' }]}>
+                      <FontAwesome name={t.icon as any} size={14} color={t.textColor} />
+                    </View>
+                    <Text style={[styles.themeLabel, { color: colors.text }, isSelected && { fontWeight: '700', color: '#2563EB' }]}>{t.label}</Text>
+                  </TouchableOpacity>
+                );
+              })}
             </View>
+          </View>
+
+          {/* CREATE ACCOUNT BUTTON */}
+          <TouchableOpacity style={styles.submitBtn} onPress={handleRegister} disabled={isLoading} activeOpacity={0.85}>
+            {isLoading ? (
+              <ActivityIndicator color="#FFFFFF" size="small" />
+            ) : (
+              <Text style={styles.submitBtnText}>Create Account</Text>
+            )}
+          </TouchableOpacity>
+
+          {/* BOTTOM FOOTER LINK */}
+          <View style={[styles.footerContainer, { borderTopColor: colors.border }]}>
+            <Text style={[styles.footerText, { color: colors.textSecondary }]}>
+              Already have an account?{' '}
+              <Text style={styles.footerLink} onPress={() => router.push('/login')}>
+                Login
+              </Text>
+            </Text>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -283,16 +278,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: 20,
     paddingVertical: 24,
-  },
-  card: {
-    borderRadius: 32,
-    borderWidth: 1,
-    padding: 24,
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.05,
-    shadowRadius: 24,
-    elevation: 4,
   },
   headerContainer: {
     alignItems: 'center',
@@ -403,7 +388,7 @@ const styles = StyleSheet.create({
   },
   themeGrid: {
     flexDirection: 'row',
-    gap: 10,
+    gap: 12,
   },
   themeCard: {
     flex: 1,
@@ -432,6 +417,8 @@ const styles = StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
     marginBottom: 8,
   },
   themeLabel: {
@@ -470,7 +457,6 @@ const styles = StyleSheet.create({
     color: '#2563EB',
     fontWeight: '700',
   },
-  // Modal Overlay
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.45)',
